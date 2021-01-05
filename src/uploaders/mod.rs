@@ -21,5 +21,8 @@ pub use self::{
     },
     amazon::{
         upload_in_amazon
+    },
+    ios::{
+        upload_in_ios
     }
 };

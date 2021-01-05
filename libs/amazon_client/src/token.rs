@@ -17,9 +17,6 @@ use super::{
     error::{
         AmazonError
     },
-    request_builder::{
-        *
-    },
     responses::{
         AmazonTokenResponse
     }

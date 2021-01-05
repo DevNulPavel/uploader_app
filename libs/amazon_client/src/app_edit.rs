@@ -4,7 +4,7 @@ use std::{
     }
 };
 use reqwest::{
-    Client,
+    // Client,
     Method,
     RequestBuilder,
     Body
@@ -27,7 +27,7 @@ use tokio_util::{
 };
 use log::{
     debug,
-    error
+    // error
 };
 use super::{
     error::{
@@ -35,9 +35,6 @@ use super::{
     },
     request_builder::{
         AmazonAppRequestBuilder
-    },
-    token::{
-        AmazonAccessToken
     },
     responses::{
         *

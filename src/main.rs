@@ -39,6 +39,7 @@ use self::{
         upload_in_google_drive,
         upload_in_google_play,
         upload_in_amazon,
+        upload_in_ios,
         UploadResult
     },
     result_senders::{
@@ -142,6 +143,17 @@ fn build_uploaders(http_client: reqwest::Client,
             let fut = upload_in_amazon(http_client,
                                        env_params, 
                                        app_params).boxed();
+            active_workers.push(fut);
+        },
+        _ => {}
+    }
+
+    // Создаем задачу выгрузки в IOS
+    match (env_params.ios, app_parameters.ios) {
+        (Some(env_params), Some(app_params)) => {
+            info!("IOS uploading task created");
+            let fut = upload_in_ios(env_params, 
+                                    app_params).boxed();
             active_workers.push(fut);
         },
         _ => {}

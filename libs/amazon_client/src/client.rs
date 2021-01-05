@@ -3,13 +3,13 @@ use std::{
         Path
     }
 };
-use log::{
-    debug, 
-    info
-};
+// use log::{
+//     debug, 
+//     info
+// };
 use reqwest::{
     Client,
-    Method,  
+    // Method,  
 };
 use super::{
     request_builder::{
@@ -20,9 +20,6 @@ use super::{
     },
     app_edit::{
         AppEdit
-    },
-    responses::{
-        *
     },
     error::{
         AmazonError

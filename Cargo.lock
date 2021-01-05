@@ -1862,6 +1862,7 @@ checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 [[package]]
 name = "slack_client_lib"
 version = "1.1.0"
+source = "git+https://github.com/DevNulPavel/slack_client_lib.git?rev=3397268383ae7cf6fb9a40b0460a2335ed7ce928#3397268383ae7cf6fb9a40b0460a2335ed7ce928"
 dependencies = [
  "async-trait",
  "futures",
@@ -1876,9 +1877,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.5.1"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae524f056d7d770e174287294f562e95044c68e88dec909a00d2094805db9d75"
+checksum = "1a55ca5f3b68e41c979bf8c46a6f1da892ca4db8f94023ce0bd32407573b1ac0"
 
 [[package]]
 name = "socket2"
@@ -2516,9 +2517,9 @@ checksum = "3e2bb9fc8309084dd7cd651336673844c1d47f8ef6d2091ec160b27f5c4aa277"
 
 [[package]]
 name = "whoami"
-version = "1.0.1"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e35495e7faf4c657051a8e9725d9c37ac57879e915be3ed55bb401af84382035"
+checksum = "d595b2e146f36183d6a590b8d41568e2bc84c922267f43baf61c956330eeb436"
 dependencies = [
  "wasm-bindgen",
  "web-sys",

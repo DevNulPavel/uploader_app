@@ -1,5 +1,0 @@
-target/
-*cache*.json
-.DS_Store
-*.env
-*.sqlite-wal

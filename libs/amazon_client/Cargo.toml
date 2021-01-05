@@ -1,0 +1,26 @@
+[package]
+name = "amazon_client"
+version = "1.0.0"
+authors = ["Pavel Ershov <pershov@game-insight.com>"]
+edition = "2018"
+
+[features]
+default = ["rustls"]
+rustls = ["reqwest/rustls-tls"]     # Пробрасываем опцию в reqwest
+native-tls = ["reqwest/native-tls"]
+
+[dependencies]
+reqwest = {version = "0.10.9", default-features = false, features = ["json", "rustls-tls", "stream"]}
+futures = "0.3.8"
+serde = {version="1.0.116", features=["derive"]}
+serde_json = "1.0.57"
+log = "0.4.11"
+url = "2.2.0"
+tokio = {version="0.2.24", default-features = false, features = ["fs", "io-util", "rt-util"]}
+tokio-util = {version = "0.3.1", features = ["codec"]}
+
+# TODO: Фичи только во время теста
+[dev-dependencies]
+tokio = {version="0.2.24", default-features = false, features = ["fs", "io-util", "macros"]}
+env_logger = "0.8.2"
+dirs = "3.0.1"

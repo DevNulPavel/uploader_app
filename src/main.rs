@@ -216,7 +216,7 @@ fn setup_logs(){
             std::env::set_var("RUST_LOG", "uploader_app=trace");
         }
     }
-    env_logger::init();
+    pretty_env_logger::init();
 }
 
 fn main() {

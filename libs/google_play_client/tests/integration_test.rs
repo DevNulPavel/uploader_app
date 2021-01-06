@@ -7,7 +7,7 @@ use std::{
     }
 };
 use log::{
-    debug,
+    // debug,
     info
 };
 use reqwest::{
@@ -15,7 +15,7 @@ use reqwest::{
 };
 use google_play_client::{
     GooglePlayClient,
-    GooglePlayUploadTask
+    // GooglePlayUploadTask
 };
 
 

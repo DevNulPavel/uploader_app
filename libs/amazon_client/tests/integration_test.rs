@@ -9,13 +9,13 @@ use std::{
 };
 use log::{
     debug,
-    info
+    // info
 };
 use reqwest::{
     Client
 };
 use amazon_client::{
-    AmazonAccessToken,
+    // AmazonAccessToken,
     AmazonClient,
     AmazonUploadTask,
     request_token

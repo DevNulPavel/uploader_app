@@ -38,3 +38,15 @@ features=["rustls"]
 
 [dev-dependencies]
 rand = "0.8.0"
+
+# Зависимости будут шарить один файлик .lock в корне + общую сборочную директорию
+# https://doc.rust-lang.org/cargo/reference/workspaces.html
+[workspace]
+members = [
+    "libs/app_center_client",
+    "libs/google_drive_client",
+    "libs/google_play_client",
+    "libs/amazon_client",
+    "libs/any_field_is_some",
+    "libs/any_field_is_some_derive"
+]

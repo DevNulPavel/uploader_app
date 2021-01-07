@@ -17,3 +17,11 @@ TEST_HELPERS:
 TEST_LIB_ENTEGRATION: 
 	$(shell gpg -a -r 0x0BD10E4E6E578FB6 -d test_environment.env.asc) && \
 	cargo test --release -- library_integration_test
+
+RUN_EXAMPLE:
+	$(shell gpg -a -r 0x0BD10E4E6E578FB6 -d test_environment.env.asc) && \
+	cargo run --example alloc_profile_test
+
+PROFILE_EXAMPLE:
+	$(shell gpg -a -r 0x0BD10E4E6E578FB6 -d test_environment.env.asc) && \
+	cargo instruments --template alloc --example alloc_profile_test

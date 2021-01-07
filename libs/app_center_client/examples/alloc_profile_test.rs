@@ -37,9 +37,9 @@ fn setup_logs() {
 }
 
 
-#[tokio::test]
-async fn library_integration_test(){
-    // tokio::time::delay_for(std::time::Duration::from_secs(60)).await;
+#[tokio::main]
+async fn main(){
+    tokio::time::delay_for(std::time::Duration::from_secs(5)).await;
 
     setup_logs();
 

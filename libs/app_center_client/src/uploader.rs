@@ -183,8 +183,8 @@ impl<'a> AppCenterUploader<'a> {
 
         let mut futures_vec = Vec::with_capacity(self.upload_threads_count);
 
-        let length = upload_info.chunk_list.len();
-        for i in 0..length {
+        let chunks_count = upload_info.chunk_list.len();
+        for i in 0..chunks_count {
             // Выделяем буффер
             let buffer: Bytes = {
                 let read_position = (i * upload_info.chunk_size) as i64;
@@ -211,11 +211,11 @@ impl<'a> AppCenterUploader<'a> {
             };
 
             // Кидаем задачу на загрузку
-            let fut_in_pined_box = upload_file_chunk(&self.http_client, &self.release_info, i, length, buffer).boxed();
+            let fut_in_pined_box = upload_file_chunk(&self.http_client, &self.release_info, i, chunks_count, buffer).boxed();
             futures_vec.push(fut_in_pined_box);
 
             // Ждем возможности закинуть еще задачу либо ждем завершения всех тасков если дошли до конца
-            let limit_val = if i < (length-1) {
+            let limit_val = if i < (chunks_count-1) {
                 self.upload_threads_count
             }else{
                 0
@@ -223,7 +223,7 @@ impl<'a> AppCenterUploader<'a> {
             while futures_vec.len() > limit_val {
                 let (result, _, left_futures) = futures::future::select_all(futures_vec).await;
                 let finished_index = result?;
-                debug!("Future number {}/{} finished", finished_index, length);
+                debug!("Future number {}/{} finished", finished_index, chunks_count);
                 futures_vec = left_futures;
             }
         }

@@ -1,6 +1,7 @@
 use std::{
     path::{
-        PathBuf
+        PathBuf,
+        Path
     }
 };
 use log::{
@@ -43,8 +44,8 @@ pub struct AppCenterBuildGitInfo{
     pub commit: String
 }
 
-pub struct AppCenterBuildUploadTask{
-    pub file_path: PathBuf,
+pub struct AppCenterBuildUploadTask<'a>{
+    pub file_path: &'a Path,
     pub distribution_groups: Option<Vec<String>>,
     pub build_description: Option<String>,
     pub git_info: Option<AppCenterBuildGitInfo>,
@@ -141,7 +142,7 @@ impl AppCenterClient {
 
     async fn update_build_meta(&self, 
                                release_id: u64,
-                               task: &AppCenterBuildUploadTask) -> Result<(), AppCenterError>{
+                               task: &AppCenterBuildUploadTask<'_>) -> Result<(), AppCenterError>{
         let text = match task.build_description {
             Some(ref desc) =>{
                 match task.git_info {
@@ -194,7 +195,7 @@ impl AppCenterClient {
         Ok(())
     }
 
-    async fn update_distribution_groups(&self, release_id: u64, task: &AppCenterBuildUploadTask) -> Result<(), AppCenterError>{
+    async fn update_distribution_groups(&self, release_id: u64, task: &AppCenterBuildUploadTask<'_>) -> Result<(), AppCenterError>{
         if let Some(ref groups) = task.distribution_groups {
             let path = format!("releases/{}", release_id);
 
@@ -255,7 +256,7 @@ impl AppCenterClient {
         Ok(result)
     }
 
-    pub async fn upload_build(&self, task: &AppCenterBuildUploadTask) -> Result<ReleaseInfoResponse, AppCenterError>{
+    pub async fn upload_build(&self, task: &AppCenterBuildUploadTask<'_>) -> Result<ReleaseInfoResponse, AppCenterError>{
         // Инициирование отгрузки
         let release_info = self
             .initialize_release()

@@ -1,6 +1,9 @@
 use std::{
     time::{
         Duration
+    },
+    path::{
+        PathBuf
     }
 };
 use tokio::{
@@ -41,6 +44,14 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
 
     info!("Start app center uploading");
 
+    let file_path: PathBuf = app_center_app_params.input_file.into();
+
+    let file_name = file_path
+        .file_name()
+        .ok_or("App center: invalid file name")?
+        .to_str()
+        .ok_or("App center: Invalid file name")?;
+
     // Создаем клиента
     let app_center_client = AppCenterClient::new(
         http_client.clone(), 
@@ -60,7 +71,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
     
     // Таска на выгрузку
     let task = AppCenterBuildUploadTask{
-        file_path: app_center_app_params.input_file.into(),
+        file_path: file_path.as_path(),
         distribution_groups: app_center_app_params.distribution_groups,
         build_description: app_center_app_params.build_description,
         git_info,
@@ -81,9 +92,20 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
         match upload_result {
             // Если все хорошо - возвращаем результат
             Ok(result) => {
+                // Финальное сообщение
+                let message = if let Some(url) = result.download_url{
+                    format!(
+                        "App Center uploading finished:\n- {}\n\nLoading url:\n- {}", 
+                        file_name,
+                        url
+                    )
+                }else{
+                    format!("App Center uploading finished:\n- {}", file_name)
+                };
+
                 return Ok(UploadResultData{
                     target: "AppCenter",
-                    message: result.download_url,
+                    message: Some(message),
                     install_url: result.install_url,
                 })
             },

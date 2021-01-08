@@ -66,7 +66,7 @@ async fn library_integration_test(){
     };
 
     let task = AppCenterBuildUploadTask{
-        file_path,
+        file_path: file_path.as_path(),
         distribution_groups: Some(groups),
         build_description: Some(description),
         git_info: Some(git_info),

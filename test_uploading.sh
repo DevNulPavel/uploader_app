@@ -28,4 +28,4 @@ target/debug/uploader_app \
 #     --google_drive_files "/Users/devnul/Downloads/magic_mac.zip","/Users/devnul/Downloads/KeePassX-2.0.3.dmg" \
 #     --google_drive_target_folder_id "1YtSfyiMp-MxF5AVWq_VnJxGtAwiMghBF" \
 #     --google_drive_subfolder_name "New folder" \
-#     --google_drive_target_owner_email "devnulpavel@gmail.com" \
+#     --google_drive_target_owner_email "devnulpavel@gmail.com"

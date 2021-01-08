@@ -1,4 +1,4 @@
-use std::{
+/*use std::{
     path::{
         PathBuf
     }, 
@@ -78,4 +78,6 @@ async fn main(){
         .expect("App center uploading failed");
 
     info!("Uploading success: {:#?}", res);
-}
+}*/
+
+fn main(){}

@@ -1,25 +1,29 @@
 use std::{
     path::{
         Path
+    },
+    io::{
+        SeekFrom
     }
 };
 use tokio::{
     fs::{
         File,
     },
-    io::{
-        AsyncReadExt
-    }
 };
 use futures::{
     FutureExt,
+    // Stream,
+    TryStream,
+    // TryStreamExt,
+    // StreamExt
 };
 use serde::{
     Deserialize
 };
 use bytes::{
     Bytes,
-    BytesMut
+    // BytesMut
 };
 use log::{
     debug
@@ -35,6 +39,8 @@ use super::{
     responses::{
         ReleasesResponse,
         MetaInfoSetResponse,
+        UploadingFinishedOkResponse,
+        // UploadingFinishedErrorResponse,
         UploadingFinishedResponse
     },
     helpers::{
@@ -44,13 +50,20 @@ use super::{
 
 //////////////////////////////////////////////////////
 
-async fn upload_file_chunk(http_client: &Client,
-                           release_info: &ReleasesResponse,
-                           chunk_number: usize,
-                           total_chunks: usize,
-                           data: Bytes) -> Result<usize, AppCenterError>{
+async fn upload_file_chunk<S>(http_client: &Client,
+                              release_info: &ReleasesResponse,
+                              chunk_number: usize,
+                              total_chunks: usize,
+                              data: S,
+                              length: u64) -> Result<usize, AppCenterError>
+where
+    S: TryStream + Send + Sync + 'static,
+    S::Error: Into<Box<dyn std::error::Error + Send + Sync>>, // Ограничение на подтип можно записывать вот так
+    S::Ok: Into<Bytes>,
+    Bytes: From<S::Ok> // Так же можно записывать ограничения, где первым параметром будет структура, а вторым - трейт
+{
 
-    debug!("Chunk number {}/{} upload started with data length: {}", chunk_number, total_chunks, data.len());
+    debug!("Chunk number {}/{} upload started with data length: {}", chunk_number+1, total_chunks, length);
 
     let url = format!("{}/upload/upload_chunk/{}",
                         release_info.upload_domain,
@@ -63,8 +76,7 @@ async fn upload_file_chunk(http_client: &Client,
         ("block_number", &chunk_number_str)
     ];
     
-    let length = data.len();
-    let body = Body::from(data);
+    let body = Body::wrap_stream(data);
 
     #[derive(Debug, Deserialize)]
     struct Response{
@@ -75,18 +87,12 @@ async fn upload_file_chunk(http_client: &Client,
     let result = http_client
         .post(&url)
         .query(&query_params)
-        .header("Content-size", length)
+        .header("Content-Length", length)
         .body(body)
         .send()
         .await?
         .json::<Response>()
         .await?;
-
-        /*.text()
-        .await
-        .map_err(|err| AppCenterError::ResponseError(err))?;*/
-        /*.error_for_status()
-        .map_err(|err| AppCenterError::ResponseError(err))? ;*/
 
     debug!("Chunk number {} upload result: {:#?}", chunk_number, result);
 
@@ -103,7 +109,6 @@ pub struct AppCenterUploader<'a>{
     http_client: Client,
     release_info: &'a ReleasesResponse,
     file_path: &'a Path,
-    file: File,
     file_length: u64,
     upload_threads_count: usize
 }
@@ -113,10 +118,8 @@ impl<'a> AppCenterUploader<'a> {
                      file_path: &'a Path,
                      upload_threads_count: usize) -> Result<AppCenterUploader<'a>, AppCenterError> {
 
-        let file = File::open(file_path)
-            .await?;
-
-        let file_length = file
+        let file_length = File::open(file_path)
+            .await?
             .metadata()
             .await?
             .len();
@@ -125,7 +128,6 @@ impl<'a> AppCenterUploader<'a> {
             http_client,
             release_info,
             file_path,
-            file,
             file_length,
             upload_threads_count
         })
@@ -183,35 +185,49 @@ impl<'a> AppCenterUploader<'a> {
 
         let mut futures_vec = Vec::with_capacity(self.upload_threads_count);
 
+        
+        let mut total_uploaded_size = 0;
         let chunks_count = upload_info.chunk_list.len();
         for i in 0..chunks_count {
-            // Выделяем буффер
-            let buffer: Bytes = {
+            // Есть проблема в Reqwest, если использовать не Stream в качестве Body, тогда сильно много уходит оперативки
+            // Внутри Body происходит клонирование буффера
+            // Поэтому просто открываем файлик много раз и читаем из разных мест
+            let (stream, length) = {
+                // Вычисление оставшегося размера буффера
                 let read_position = (i * upload_info.chunk_size) as i64;
                 let file_bytes_left = (self.file_length as i64) - read_position;
                 assert!(file_bytes_left > 0, "Bytes left must be greater than 0");
                 let buffer_size = if file_bytes_left > (upload_info.chunk_size as i64) {
-                    upload_info.chunk_size as usize
+                    upload_info.chunk_size as u64
                 }else{
-                    file_bytes_left as usize
+                    file_bytes_left as u64
                 };
+                total_uploaded_size += buffer_size;
+                assert!(buffer_size > 0, "Buffer size must be greater than 0");
 
-                // Готовим буффер
-                let mut buffer = BytesMut::new();
-                buffer.resize(buffer_size, 0);
-
-                // Читаем с текущего места файла только нужное количество байт
-                let read_count = self.file
-                    .read_exact(&mut buffer)
+                // Открыли файлик
+                let mut file = File::open(self.file_path)
                     .await?;
 
-                assert_eq!(read_count, buffer_size as usize, "Invalid read size from file");
+                // Сместились на нужное место
+                let seek_value = file
+                    .seek(SeekFrom::Start(read_position as u64))
+                    .await?;
+                assert_eq!(seek_value, read_position as u64, "Seek position must be valid");
 
-                buffer.freeze()
+                // Берем только нужное количество данных из файлика
+                // TODO: Почему-то работает криво, используем Content-Length для ограничения
+                // let file = file.take(buffer_size as u64);
+
+                // Файлик преобразуем в stream
+                let stream = tokio_util::codec::FramedRead::new(file, tokio_util::codec::BytesCodec::new());
+
+                // Читаем только нужный размер буффера
+                (stream, buffer_size)
             };
 
             // Кидаем задачу на загрузку
-            let fut_in_pined_box = upload_file_chunk(&self.http_client, &self.release_info, i, chunks_count, buffer).boxed();
+            let fut_in_pined_box = upload_file_chunk(&self.http_client, &self.release_info, i, chunks_count, stream, length).boxed();
             futures_vec.push(fut_in_pined_box);
 
             // Ждем возможности закинуть еще задачу либо ждем завершения всех тасков если дошли до конца
@@ -223,17 +239,20 @@ impl<'a> AppCenterUploader<'a> {
             while futures_vec.len() > limit_val {
                 let (result, _, left_futures) = futures::future::select_all(futures_vec).await;
                 let finished_index = result?;
-                debug!("Future number {}/{} finished", finished_index, chunks_count);
+                debug!("Future number {}/{} finished", finished_index+1, chunks_count);
                 futures_vec = left_futures;
             }
         }
+
+        assert_eq!(futures_vec.len(), 0, "Futures count must be zero");
+        assert_eq!(total_uploaded_size, self.file_length, "Total size and file length must be equal");
 
         debug!("Uploading loop finished");
 
         Ok(())
     }
 
-    async fn commit_uploading(&self) -> Result<UploadingFinishedResponse, AppCenterError>{
+    async fn commit_uploading(&self) -> Result<UploadingFinishedOkResponse, AppCenterError>{
         let url = format!("{}/upload/finished/{}",
                             self.release_info.upload_domain,
                             self.release_info.package_asset_id);
@@ -249,11 +268,18 @@ impl<'a> AppCenterUploader<'a> {
             .await?;
 
         debug!("Commit uploading result: {:#?}", result);
-
-        Ok(result)
+        
+        match result {
+            UploadingFinishedResponse::Ok(res) => {
+                Ok(res)
+            },
+            UploadingFinishedResponse::Error(err) => {
+                Err(AppCenterError::Custom(format!("Commit failed with error: {}", err.error_code)))
+            }
+        }
     }
 
-    pub async fn upload(mut self) -> Result<UploadingFinishedResponse, AppCenterError> {
+    pub async fn upload(mut self) -> Result<UploadingFinishedOkResponse, AppCenterError> {
         let meta_set_result = self
             .upload_file_stats()
             .await?;

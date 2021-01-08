@@ -12,6 +12,8 @@ use serde_json::{
     Value
 };
 
+//////////////////////////////////////////////////////////////////
+
 #[derive(Deserialize, Debug)]
 pub struct ReleasesResponse{
     pub id: String,
@@ -20,6 +22,8 @@ pub struct ReleasesResponse{
     pub url_encoded_token: String,
     pub package_asset_id: String
 }
+
+//////////////////////////////////////////////////////////////////
 
 #[derive(Deserialize, Debug)]
 pub struct MetaInfoSetResponse{
@@ -31,9 +35,10 @@ pub struct MetaInfoSetResponse{
     pub chunk_size: usize
 }
 
+//////////////////////////////////////////////////////////////////
+
 #[derive(Deserialize, Debug)]
-pub struct UploadingFinishedResponse{
-    pub error_code: String,
+pub struct UploadingFinishedOkResponse{
     pub location: String,
     pub raw_location: String,
     pub absolute_uri: String,
@@ -41,10 +46,26 @@ pub struct UploadingFinishedResponse{
 }
 
 #[derive(Deserialize, Debug)]
+pub struct UploadingFinishedErrorResponse{
+    pub error_code: String
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum UploadingFinishedResponse{
+    Ok(UploadingFinishedOkResponse),
+    Error(UploadingFinishedErrorResponse)
+}
+
+//////////////////////////////////////////////////////////////////
+
+#[derive(Deserialize, Debug)]
 pub struct UploadingFinishedSetStatusResponse{
     pub id: String,
     pub upload_status: String
 }
+
+//////////////////////////////////////////////////////////////////
 
 // https://openapi.appcenter.ms/#/distribute/releases_getReleaseUploadStatus
 // Размещать поля надо от большего количества полей к меньшему для нормального парсинга
@@ -68,6 +89,8 @@ pub enum UploadingFinishedGetStatusResponse{
     Unknown(HashMap<String, Value>)
 }
 
+//////////////////////////////////////////////////////////////////
+
 // https://openapi.appcenter.ms/#/distribute/releases_update
 // Размещать поля надо от большего количества полей к меньшему для нормального парсинга
 #[derive(Deserialize, Debug)]
@@ -81,6 +104,8 @@ pub enum ReleaseUpdateResponse{
         destinations: Vec<HashMap<String, String>>
     }
 }
+
+//////////////////////////////////////////////////////////////////
 
 // https://openapi.appcenter.ms/#/distribute/releases_getLatestByUser
 #[derive(Deserialize, Debug)]

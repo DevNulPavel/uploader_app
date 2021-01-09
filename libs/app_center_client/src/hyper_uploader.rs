@@ -18,15 +18,13 @@ use serde::{
     Deserialize
 };
 use bytes::{
-    Bytes,
-    BytesMut
+    Bytes
 };
 use log::{
     debug
 };
 use reqwest::{
-    Client,
-    Body
+    Client
 };
 use super::{
     error::{
@@ -44,27 +42,50 @@ use super::{
 
 //////////////////////////////////////////////////////
 
-async fn upload_file_chunk(http_client: &Client,
-                           release_info: &ReleasesResponse,
-                           chunk_number: usize,
-                           total_chunks: usize,
-                           data: Bytes) -> Result<usize, AppCenterError>{
+
+async fn upload_file_chunk<C>(http_client: &hyper::Client<C>,
+                              release_info: &ReleasesResponse,
+                              chunk_number: usize,
+                              total_chunks: usize,
+                              data: Vec<u8>) -> Result<usize, AppCenterError>
+where
+    C: hyper::client::connect::Connect + Send + Sync + Clone + 'static {
 
     debug!("Chunk number {}/{} upload started with data length: {}", chunk_number, total_chunks, data.len());
 
-    let url = format!("{}/upload/upload_chunk/{}",
+    let url = format!("{}/upload/upload_chunk/{}?token={}&block_number={}",
                         release_info.upload_domain,
-                        release_info.package_asset_id);
+                        release_info.package_asset_id,
+                        release_info.url_encoded_token,
+                        chunk_number
+                    );
 
-    let chunk_number_str = format!("{}", chunk_number + 1);
-
-    let query_params = [
-        ("token", &release_info.token),
-        ("block_number", &chunk_number_str)
-    ];
+    debug!("Chunk upload url: {}", url);
     
     let length = data.len();
-    let body = Body::from(data);
+    let body = hyper::Body::from(data);
+
+    let request = hyper::Request::builder()
+        .uri(&url)
+        .header("Content-Length", length)
+        .method(hyper::Method::POST)
+        .body(body)
+        .map_err(|err|{ AppCenterError::CustomDyn(Box::new(err)) })?; // TODO: ?? 
+
+    let response = http_client
+        .request(request)
+        .await
+        .map_err(|err|{ AppCenterError::CustomDyn(Box::new(err)) })?; // TODO: ?? 
+
+    if !response.status().is_success(){
+        return Err(AppCenterError::Custom(format!("Hyper response invalid status: {}", response.status()))) // TODO: ???
+    }
+
+    let response_body = response.into_body();
+
+    let bytes = hyper::body::to_bytes(response_body)
+        .await
+        .map_err(|err|{ AppCenterError::CustomDyn(Box::new(err)) })?; // TODO: ?? 
 
     #[derive(Debug, Deserialize)]
     struct Response{
@@ -72,21 +93,9 @@ async fn upload_file_chunk(http_client: &Client,
         chunk_num: usize,
         error: bool
     }
-    let result = http_client
-        .post(&url)
-        .query(&query_params)
-        .header("Content-Length", length)
-        .body(body)
-        .send()
-        .await?
-        .json::<Response>()
-        .await?;
 
-        /*.text()
-        .await
-        .map_err(|err| AppCenterError::ResponseError(err))?;*/
-        /*.error_for_status()
-        .map_err(|err| AppCenterError::ResponseError(err))? ;*/
+    let result: Response = serde_json::from_slice::<Response>(bytes.as_ref())
+        .map_err(|err|{ AppCenterError::CustomDyn(Box::new(err)) })?; // TODO: ?? 
 
     debug!("Chunk number {} upload result: {:#?}", chunk_number, result);
 
@@ -181,12 +190,15 @@ impl<'a> AppCenterUploader<'a> {
     async fn upload_file(&mut self, upload_info: MetaInfoSetResponse) -> Result<(), AppCenterError>{
         // const MAX_UPLOADS_COUNT: usize = 10;
 
+        let https = hyper_rustls::HttpsConnector::new();
+        let client = hyper::Client::builder().build(https);
+
         let mut futures_vec = Vec::with_capacity(self.upload_threads_count);
 
         let chunks_count = upload_info.chunk_list.len();
         for i in 0..chunks_count {
             // Выделяем буффер
-            let buffer: Bytes = {
+            let buffer = {
                 let read_position = (i * upload_info.chunk_size) as i64;
                 let file_bytes_left = (self.file_length as i64) - read_position;
                 assert!(file_bytes_left > 0, "Bytes left must be greater than 0");
@@ -207,11 +219,11 @@ impl<'a> AppCenterUploader<'a> {
 
                 assert_eq!(read_count, buffer_size as usize, "Invalid read size from file");
 
-                Bytes::from(buffer)
+                buffer
             };
 
             // Кидаем задачу на загрузку
-            let fut_in_pined_box = upload_file_chunk(&self.http_client, &self.release_info, i, chunks_count, buffer).boxed();
+            let fut_in_pined_box = upload_file_chunk(&client, &self.release_info, i, chunks_count, buffer).boxed();
             futures_vec.push(fut_in_pined_box);
 
             // Ждем возможности закинуть еще задачу либо ждем завершения всех тасков если дошли до конца

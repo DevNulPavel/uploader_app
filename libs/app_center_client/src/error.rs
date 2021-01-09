@@ -19,6 +19,7 @@ pub enum AppCenterError{
     URLError(ParseError),
     NetErr(reqwest::Error),
     Custom(String),
+    CustomDyn(Box<dyn std::error::Error>),
     WrongFilePath,
     FileError(io::Error),
     ReleaseIdReceiveFailed(String),

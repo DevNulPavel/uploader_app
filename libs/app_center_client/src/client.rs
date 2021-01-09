@@ -34,6 +34,9 @@ use super::{
     file_stream_uploader::{
         AppCenterUploader
     },
+    // hyper_uploader::{
+    //     AppCenterUploader
+    // },
     error::{
         AppCenterError
     }

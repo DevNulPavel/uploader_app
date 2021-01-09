@@ -28,7 +28,10 @@ use super::{
     responses::{
         *
     },
-    uploader::{
+    // bytes_uploader::{
+    //     AppCenterUploader
+    // },
+    file_stream_uploader::{
         AppCenterUploader
     },
     error::{

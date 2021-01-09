@@ -75,7 +75,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
         distribution_groups: app_center_app_params.distribution_groups,
         build_description: app_center_app_params.build_description,
         git_info,
-        upload_threads_count: 5
+        upload_threads_count: 10
     };
 
     let mut iteration_number = 0_u32;

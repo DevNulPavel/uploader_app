@@ -93,9 +93,14 @@ where
     }
 }
 
+struct UploadersResult {
+    result_slack: Option<ResultSlackEnvironment>,
+    active_workers: Vec<Pin<Box<dyn Future<Output=UploadResult> + Send>>>
+}
+
 fn build_uploaders(http_client: reqwest::Client, 
                    env_params: AppEnvValues, 
-                   app_parameters: AppParameters) -> (Option<ResultSlackEnvironment>, Vec<Pin<Box<dyn Future<Output=UploadResult> + Send>>>) {
+                   app_parameters: AppParameters) -> UploadersResult {
 
     let mut active_workers = Vec::new();
 
@@ -159,7 +164,11 @@ fn build_uploaders(http_client: reqwest::Client,
         _ => {}
     }
 
-    (env_params.result_slack, active_workers)
+    UploadersResult{
+        result_slack: env_params.result_slack,
+        active_workers: active_workers
+    }
+    //(env_params.result_slack, active_workers)
 }
 
 async fn async_main() {
@@ -186,7 +195,7 @@ async fn async_main() {
     let http_client = reqwest::Client::new();
 
     // Вектор с активными футурами выгрузки
-    let (result_slack, active_workers) = build_uploaders(http_client.clone(), env_params, app_parameters);
+    let UploadersResult{result_slack, active_workers} = build_uploaders(http_client.clone(), env_params, app_parameters);
 
     // Получаетели результатов выгрузки
     let result_senders = {
@@ -211,11 +220,11 @@ fn setup_logs(){
     // Активируем логирование и настраиваем уровни вывода
     // https://rust-lang-nursery.github.io/rust-cookbook/development_tools/debugging/config_log.html
     //#[cfg(debug_assertions)]
-    {
+    /*{
         if !std::env::var("RUST_LOG").is_ok() {
             std::env::set_var("RUST_LOG", "uploader_app=trace");
         }
-    }
+    }*/
     pretty_env_logger::init();
 }
 

@@ -184,6 +184,7 @@ impl GoogleDriveClient {
                 found_list = get_files_list_with_query(&self.request_builder, &query, found_list.next_page_token)
                     .await?;
             }else{
+                info!("Folder search finished, next token is empty");
                 break;
             }
         }

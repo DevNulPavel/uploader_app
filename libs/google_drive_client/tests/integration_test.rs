@@ -40,7 +40,7 @@ fn setup_logs() {
 async fn library_integration_test(){
     setup_logs();
 
-    let key = yup_oauth2::read_service_account_key("test_google_drive_gi_auth.json")
+    let key = yup_oauth2::read_service_account_key("test_google_drive_gi_auth_new.json")
         .await
         .expect("Auth info parse failed");
 
@@ -50,7 +50,10 @@ async fn library_integration_test(){
         .expect("Authentification failed");
 
     let token = auth
-        .token(&["https://www.googleapis.com/auth/drive"])
+        .token(&[
+            "https://www.googleapis.com/auth/drive",
+            // "https://www.googleapis.com/auth/drive/file"
+        ])
         .await
         .expect("Token receive failed");
 
@@ -60,7 +63,7 @@ async fn library_integration_test(){
 
     info!("Google drive client created");
 
-    let parent_folder = client.get_folder_for_id("1L1hJLkOsmn1p9VdnbuncxE7pCdB9sdbk")
+    let parent_folder = client.get_folder_for_id("18xmVr0MGGLximw6TgPeWUZp9aEf81cCc")
         .await
         .expect("Folder request failed")
         .expect("Folder can not be empty");

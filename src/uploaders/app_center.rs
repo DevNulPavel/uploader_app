@@ -93,7 +93,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
             // Если все хорошо - возвращаем результат
             Ok(result) => {
                 // Финальное сообщение
-                let message = if let Some(url) = result.download_url{
+                let message = if let Some(ref url) = result.download_url{
                     format!(
                         "App Center uploading finished:\n- {}\n\nLoading url:\n- {}", 
                         file_name,
@@ -106,7 +106,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
                 return Ok(UploadResultData{
                     target: "AppCenter",
                     message: Some(message),
-                    install_url: result.install_url,
+                    install_url: result.download_url,
                 })
             },
 

@@ -24,7 +24,12 @@ pub async fn get_files_list_with_query(request_builder: &GoogleDriveRequestBuild
     let info = request_builder
         .build_request(Method::GET, "drive/v3/files")?
         .query(&[
-            ("fields", "nextPageToken,files(id,parents,mimeType,name,webContentLink,webViewLink)"),
+            ("corpora", "allDrives"),
+            ("includeItemsFromAllDrives", "true"),
+            ("supportsAllDrives", "true"),
+            ("includeTeamDriveItems", "true"),
+            ("supportsTeamDrives", "true"),
+            ("fields", "nextPageToken,files(id,mimeType,name,webContentLink,webViewLink)"),
             ("pageToken", &page_token),
             ("q", query)
         ])

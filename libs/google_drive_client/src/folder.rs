@@ -5,6 +5,9 @@ use reqwest::{
         Part
     }
 };
+use into_result::{
+    IntoResult
+};
 use log::{
     debug
 };
@@ -17,6 +20,7 @@ use super::{
     },
     responses::{
         FilesUploadResponse,
+        FilesUploadResponseOk,
     },
     helpers::{
         get_files_list_with_query
@@ -30,22 +34,22 @@ use super::{
 
 pub struct GoogleDriveFolder{
     request_builder: GoogleDriveRequestBuilder,
-    info: FilesUploadResponse
+    info: FilesUploadResponseOk
 }
-impl Into<FilesUploadResponse> for GoogleDriveFolder {
-    fn into(self) -> FilesUploadResponse {
+impl Into<FilesUploadResponseOk> for GoogleDriveFolder {
+    fn into(self) -> FilesUploadResponseOk {
         self.info
     }
 }
 impl GoogleDriveFolder {
-    pub(super) fn new(request_builder: GoogleDriveRequestBuilder, info: FilesUploadResponse) -> GoogleDriveFolder{
+    pub(super) fn new(request_builder: GoogleDriveRequestBuilder, info: FilesUploadResponseOk) -> GoogleDriveFolder{
         GoogleDriveFolder{
             request_builder,
             info
         }
     }
     
-    pub fn get_info(&self) -> &FilesUploadResponse{
+    pub fn get_info(&self) -> &FilesUploadResponseOk{
         &self.info
     }
 
@@ -96,7 +100,7 @@ impl GoogleDriveFolder {
         // https://developers.google.com/drive/api/v3/reference/files/create
         let parent_id = &self.info.id;
         let meta = json!({
-            "subfolder_name": subfolder_name,
+            "name": subfolder_name,
             "parents": [
                 parent_id
             ],
@@ -121,7 +125,8 @@ impl GoogleDriveFolder {
             .send()
             .await?
             .json::<FilesUploadResponse>()
-            .await?;
+            .await?
+            .into_result()?;
 
         Ok(GoogleDriveFolder::new(self.request_builder.clone(), response))
     }

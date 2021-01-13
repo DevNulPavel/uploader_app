@@ -40,7 +40,7 @@ fn setup_logs() {
 async fn library_integration_test(){
     setup_logs();
 
-    let key = yup_oauth2::read_service_account_key("test_google_drive_my_auth.json")
+    let key = yup_oauth2::read_service_account_key("test_google_drive_gi_auth.json")
         .await
         .expect("Auth info parse failed");
 
@@ -60,9 +60,7 @@ async fn library_integration_test(){
 
     info!("Google drive client created");
 
-    let file_path = PathBuf::from("/Users/devnul/Downloads/jdk-15.0.1_osx-x64_bin.dmg");
-
-    let parent_folder = client.get_folder_for_id("1YtSfyiMp-MxF5AVWq_VnJxGtAwiMghBF")
+    let parent_folder = client.get_folder_for_id("1L1hJLkOsmn1p9VdnbuncxE7pCdB9sdbk")
         .await
         .expect("Folder request failed")
         .expect("Folder can not be empty");
@@ -75,7 +73,9 @@ async fn library_integration_test(){
         .expect("Subfolder create failed");
 
     debug!("Sub folder: {:#?}", sub_folder.get_info());
-    
+
+    let file_path = PathBuf::from("/Users/devnul/Downloads/jdk-15.0.1_osx-x64_bin.dmg");
+
     let task = GoogleDriveUploadTask {
         file_path,
         parent_folder: &sub_folder,

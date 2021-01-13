@@ -4,6 +4,9 @@ use std::{
         PathBuf
     }
 };
+use into_result::{
+    IntoResult
+};
 use log::{
     debug, 
     info
@@ -101,7 +104,6 @@ impl GoogleDriveClient {
             .ok_or(GoogleDriveError::WrongFilePath)?
             .to_str()
             .ok_or(GoogleDriveError::WrongFilePath)?;
-
         debug!("File name: {}", file_name);
         
         // let mut total_uploaded = 0;
@@ -147,7 +149,8 @@ impl GoogleDriveClient {
             .send()
             .await?
             .json::<FilesUploadResponse>()
-            .await?;
+            .await?
+            .into_result()?;
 
         debug!("Uploading response: {:#?}", info);
 
@@ -212,7 +215,7 @@ impl GoogleDriveClient {
         }
 
         // Результат
-        let FilesUploadResponse { name, web_view_link, web_content_link, .. } = upload_res.into();
+        let FilesUploadResponseOk { name, web_view_link, web_content_link, .. } = upload_res.into();
         match web_content_link {
             Some(web_content_link) => {
                 Ok(GoogleDriveUploadResult{

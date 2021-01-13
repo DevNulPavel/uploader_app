@@ -746,6 +746,7 @@ dependencies = [
  "dirs",
  "env_logger 0.8.2",
  "futures",
+ "into-result",
  "log",
  "mime",
  "mime_guess",
@@ -1004,6 +1005,12 @@ checksum = "61124eeebbd69b8190558df225adf7e4caafce0d743919e5d6b19652314ec5ec"
 dependencies = [
  "cfg-if 1.0.0",
 ]
+
+[[package]]
+name = "into-result"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a443091bd4c137349b814297f94978b4d6dda207898e4a7009623497b6bb9fb"
 
 [[package]]
 name = "iovec"

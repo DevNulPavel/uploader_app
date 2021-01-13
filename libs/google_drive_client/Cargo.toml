@@ -21,6 +21,7 @@ mime = "0.3.16"
 mime_guess = "2.0.3"
 tokio = {version="0.2.24", default-features = false, features = ["fs", "io-util", "rt-util"]}
 tokio-util = {version = "0.3.1", features = ["codec"]}
+into-result = "0.3.1"
 
 # TODO: Фичи только во время теста
 [dev-dependencies]

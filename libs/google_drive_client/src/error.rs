@@ -12,6 +12,12 @@ use std::{
 use url::{
     ParseError
 };
+use super::{
+    responses::{
+        ResponseErrorValue,
+        ResponseErr
+    }
+};
 
 #[derive(Debug)]
 pub enum GoogleDriveError{
@@ -23,6 +29,7 @@ pub enum GoogleDriveError{
     FileError(io::Error),
     TokenIsExpired,
     EmptyNewOwner,
+    ErrorResponse(ResponseErrorValue)
 }
 
 impl From<ParseError> for GoogleDriveError {
@@ -38,6 +45,11 @@ impl From<io::Error> for GoogleDriveError {
 impl From<reqwest::Error> for GoogleDriveError {
     fn from(err: reqwest::Error) -> GoogleDriveError {
         GoogleDriveError::NetErr(err)
+    }
+}
+impl From<ResponseErr> for GoogleDriveError {
+    fn from(err: ResponseErr) -> GoogleDriveError {
+        GoogleDriveError::ErrorResponse(err.error)
     }
 }
 

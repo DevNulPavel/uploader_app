@@ -13,7 +13,9 @@ use super::{
         GoogleDriveRequestBuilder
     },
     responses::{
-        FilesUploadResponse
+        // FilesUploadResponse,
+        FilesUploadResponseOk,
+        // FilesUploadResponseErr
     },
     error::{
         GoogleDriveError
@@ -73,22 +75,22 @@ impl<'a> FileOwner for EmailFileOwner<'a>{
 
 pub struct GoogleDriveFile{
     client: GoogleDriveRequestBuilder,
-    info: FilesUploadResponse
+    info: FilesUploadResponseOk
 }
-impl Into<FilesUploadResponse> for GoogleDriveFile {
-    fn into(self) -> FilesUploadResponse {
+impl Into<FilesUploadResponseOk> for GoogleDriveFile {
+    fn into(self) -> FilesUploadResponseOk {
         self.info
     }
 }
 impl GoogleDriveFile {
-    pub fn new(client: GoogleDriveRequestBuilder, info: FilesUploadResponse) -> GoogleDriveFile{
+    pub fn new(client: GoogleDriveRequestBuilder, info: FilesUploadResponseOk) -> GoogleDriveFile{
         GoogleDriveFile{
             client,
             info
         }
     }
     
-    pub fn get_info(&self) -> &FilesUploadResponse{
+    pub fn get_info(&self) -> &FilesUploadResponseOk{
         &self.info
     }
 

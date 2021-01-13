@@ -15,7 +15,7 @@ use reqwest::{
 };
 use google_play_client::{
     GooglePlayClient,
-    // GooglePlayUploadTask
+    GooglePlayUploadTask
 };
 
 
@@ -60,5 +60,17 @@ async fn library_integration_test(){
 
     info!("Google play client created");
 
-    let file_path = PathBuf::from("");
+    let file_path = PathBuf::from("/Users/devnul/Downloads/app-release.aab");
+
+    let task = GooglePlayUploadTask{
+        file_path: &file_path,
+        package_name: "com.gameinsight.gplay.island2",
+        // target_track: Some("internal")
+        target_track: None
+    };
+    let result = client.upload(task)
+        .await
+        .expect("Google play upload failed");
+
+    info!("Uploaded build number: {}", result);
 }

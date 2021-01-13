@@ -7,6 +7,9 @@ use log::{
     debug, 
     info
 };
+use into_result::{
+    IntoResult
+};
 use yup_oauth2::{
     AccessToken
 };
@@ -51,9 +54,20 @@ impl GooglePlayClient {
     }
 
     async fn start_insert<'a>(&'a self, package_name: &str) -> Result<AppEdit<'a>, GooglePlayError>{
-        let request_builder = GooglePlayRequestBuilder::new(self.http_client.clone(), package_name, &self.token)?;
+        let configure_request_builder = GooglePlayRequestBuilder::new(
+            self.http_client.clone(), 
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications",
+            package_name, 
+            &self.token
+        )?;
+        let upload_request_builder = GooglePlayRequestBuilder::new(
+            self.http_client.clone(), 
+            "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications",
+            package_name, 
+            &self.token
+        )?;
 
-        let edit = AppEdit::new(request_builder)
+        let edit = AppEdit::new(configure_request_builder, upload_request_builder)
             .await?;
 
         Ok(edit)
@@ -68,14 +82,12 @@ impl GooglePlayClient {
         let edit = self
             .start_insert(&task.package_name)
             .await?;
-
         // debug!("Google play edit result: {:#?}", edit.get_info());
 
         // Выгрузка
         let upload_result = edit
             .upload_build(&task.file_path)
             .await?;
-
         debug!("Google play upload result: {:#?}", upload_result);
 
         // Обновляем таргет если надо

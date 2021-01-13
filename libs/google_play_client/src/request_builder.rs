@@ -28,11 +28,13 @@ pub struct GooglePlayRequestBuilder<'a>{
 }
 impl<'a> GooglePlayRequestBuilder<'a> {
     pub fn new(http_client: Client,
+               base_url: &str,
                package_name: &str,
                token: &'a AccessToken) -> Result<GooglePlayRequestBuilder<'a>, GooglePlayError> {
 
         let base_url = format!(
-            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{}/",
+            "{}/{}/",
+            base_url.trim_end_matches('/'),
             package_name
         );
 

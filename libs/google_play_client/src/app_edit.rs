@@ -4,7 +4,14 @@ use std::{
 use reqwest::{
     RequestBuilder,
     Method,
-    Body
+    Body,
+    multipart::{
+        Form,
+        Part
+    }
+};
+use log::{
+    debug
 };
 use tokio::{
     fs::{
@@ -19,6 +26,9 @@ use tokio_util::{
         BytesCodec,
         FramedRead
     }
+};
+use into_result::{
+    IntoResult
 };
 use super::{
     responses::{
@@ -63,13 +73,14 @@ impl<'a> EditRequestBuilder<'a> {
 ///////////////////////////////////////////////////////
 
 pub struct AppEdit<'a>{
-    request_builder: EditRequestBuilder<'a>
+    edit_request_builder: EditRequestBuilder<'a>,
+    upload_request_builder: EditRequestBuilder<'a>
 }
 impl<'a> AppEdit<'a> {
-    pub async fn new(request_builder: GooglePlayRequestBuilder<'a>) -> Result<AppEdit<'a>, GooglePlayError> {
+    pub async fn new(config_request_builder: GooglePlayRequestBuilder<'a>, upload_request_builder: GooglePlayRequestBuilder<'a>) -> Result<AppEdit<'a>, GooglePlayError> {
         // https://developers.google.com/android-publisher/api-ref/rest/v3/edits/insert
         // https://developers.google.com/android-publisher/api-ref/rest/v3/edits#AppEdit
-        let edit_info = request_builder
+        let edit_info = config_request_builder
             .build_request(Method::POST, "edits")?
             .send()
             .await?
@@ -77,11 +88,16 @@ impl<'a> AppEdit<'a> {
             .await?;
 
         Ok(AppEdit{
-            request_builder: EditRequestBuilder::new(request_builder, edit_info.id)
+            edit_request_builder: EditRequestBuilder::new(config_request_builder, edit_info.id.clone()),
+            upload_request_builder: EditRequestBuilder::new(upload_request_builder, edit_info.id)
         })
     }
 
-    pub async fn upload_build(&self, file_path: &Path) -> Result<UploadResponse, GooglePlayError>{
+    pub async fn upload_build(&self, file_path: &Path) -> Result<UploadResponseOk, GooglePlayError>{
+        // https://developers.google.com/android-publisher/api-ref/rest/v3/edits.apks
+        // https://developers.google.com/android-publisher/api-ref/rest/v3/edits.bundles
+        // https://developers.google.com/android-publisher/upload
+
         // Тип выгрузки
         let extention = file_path
             .extension()
@@ -93,37 +109,62 @@ impl<'a> AppEdit<'a> {
             "apk" => "apks",
             _ => return Err(GooglePlayError::InvalidFileExtention("Only .aab or .apk supported"))
         };
-        
-        // Файлик в виде стрима
-        let file = File::open(file_path).await?;
-        let file_length = file.metadata().await?.len();
-        let reader = FramedRead::new(file, BytesCodec::new())
-            /*.map(move |v| {
+
+        let file_name = file_path
+            .file_name()
+            .ok_or(GooglePlayError::WrongFilePath)?
+            .to_str()
+            .ok_or(GooglePlayError::WrongFilePath)?;
+
+        // Progress
+        /*.map(move |v| {
                 if let Ok(ref v) = v{
                     total_uploaded += v.len();
                     info!("Uploaded {}: {}/{}", file_name_stream, total_uploaded, file_length);
                 }
                 v
-            })*/;
+            })*/
+        
+        // Файлик в виде стрима
+        let file = File::open(file_path).await?;
+        let file_length = file.metadata().await?.len();
+        let reader = FramedRead::new(file, BytesCodec::new());
         let body = Body::wrap_stream(reader);
 
+        // Первой секцией идет метаинформация в формате json
+        let meta = json!({
+        }).to_string();
+
+        let multipart = Form::new()
+            .part("meta", Part::text(meta)
+                            .mime_str("application/json; charset=UTF-8")
+                            .expect("Meta set failed"))
+            .part("body", Part::stream_with_length(body, file_length)
+                            .file_name(file_name.to_owned())
+                            .mime_str("application/octet-stream")
+                            .expect("Meta set failed"));
+
         // Грузим
-        let response = self.request_builder
+        let response = self.upload_request_builder
             .build_request(Method::POST, upload_type)?
             .query(&[
+                ("uploadType", "multipart"),
                 ("ackBundleInstallationWarning", "true")
             ])
-            .header("Content-Length", file_length)
-            .body(body)
+            // .header("Content-Length", file_length)
+            .multipart(multipart)
             .send()
             .await?
             .json::<UploadResponse>()
-            .await?;
+            .await?
+            .into_result()?;
+            
+        debug!("Upload result: {:?}", response);
 
         Ok(response)
     }
 
-    pub async fn update_track_to_complete(&self, track: &str, app_version: &UploadResponse) -> Result<TrackUpdateResponse, GooglePlayError>{
+    pub async fn update_track_to_complete(&self, track: &str, app_version: &UploadResponseOk) -> Result<TrackUpdateResponse, GooglePlayError>{
         // https://developers.google.com/android-publisher/api-ref/rest/v3/edits.tracks
         // https://developers.google.com/android-publisher/api-ref/rest/v3/edits.tracks#Release
         // "countryTargeting": {
@@ -143,7 +184,7 @@ impl<'a> AppEdit<'a> {
                 }
             ]
         });
-        let response = self.request_builder
+        let response = self.edit_request_builder
             .build_request(Method::PUT, &path)?
             .json(&body)
             .send()
@@ -156,7 +197,7 @@ impl<'a> AppEdit<'a> {
 
     pub async fn validate(&self) -> Result<AppEditResponse, GooglePlayError>{
         // https://developers.google.com/android-publisher/api-ref/rest/v3/edits/validate
-        let response = self.request_builder
+        let response = self.edit_request_builder
             .build_request(Method::POST, ":validate")?
             .send()
             .await?
@@ -168,7 +209,7 @@ impl<'a> AppEdit<'a> {
 
     pub async fn commit(&self) -> Result<AppEditResponse, GooglePlayError>{
         // https://developers.google.com/android-publisher/api-ref/rest/v3/edits/commit
-        let response = self.request_builder
+        let response = self.edit_request_builder
             .build_request(Method::POST, ":commit")?
             .send()
             .await?

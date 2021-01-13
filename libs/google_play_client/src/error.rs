@@ -12,6 +12,12 @@ use std::{
 use url::{
     ParseError
 };
+use super::{
+    responses::{
+        ErrorResponse,
+        ErrorResponseValue
+    }
+};
 
 #[derive(Debug)]
 pub enum GooglePlayError{
@@ -22,6 +28,7 @@ pub enum GooglePlayError{
     InvalidFileExtention(&'static str),
     FileError(io::Error),
     TokenIsExpired,
+    ResponseError(ErrorResponseValue),
     Custom(String),
 }
 
@@ -38,6 +45,11 @@ impl From<io::Error> for GooglePlayError {
 impl From<reqwest::Error> for GooglePlayError {
     fn from(err: reqwest::Error) -> GooglePlayError {
         GooglePlayError::NetErr(err)
+    }
+}
+impl From<ErrorResponse> for GooglePlayError {
+    fn from(err: ErrorResponse) -> GooglePlayError {
+        GooglePlayError::ResponseError(err.error)
     }
 }
 

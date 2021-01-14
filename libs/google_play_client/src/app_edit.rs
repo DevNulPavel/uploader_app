@@ -2,7 +2,7 @@ use std::{
     path::Path
 };
 use reqwest::{
-    RequestBuilder,
+    // RequestBuilder,
     Method,
     Body,
     multipart::{
@@ -47,49 +47,26 @@ use super::{
 
 ///////////////////////////////////////////////////////
 
-struct EditRequestBuilder<'a>{
-    request_builder: GooglePlayRequestBuilder<'a>,
-    edit_id: String
+pub struct AppEdit {
+    request_builder: GooglePlayRequestBuilder
 }
-impl<'a> EditRequestBuilder<'a> {
-    fn new(request_builder: GooglePlayRequestBuilder<'a>, edit_id: String) -> EditRequestBuilder{
-        EditRequestBuilder{
-            request_builder,
-            edit_id
-        }
-    }
-    fn build_request(&self, method: Method, path: &str) -> Result<RequestBuilder, GooglePlayError> {
-        let path = if path.starts_with(':'){
-            format!("edits/{}{}", self.edit_id, path)
-        }else{
-            format!("edits/{}/{}", self.edit_id, path.trim_matches('/'))
-        };     
-        self
-            .request_builder
-            .build_request(method, &path)
-    }
-}
-
-///////////////////////////////////////////////////////
-
-pub struct AppEdit<'a>{
-    edit_request_builder: EditRequestBuilder<'a>,
-    upload_request_builder: EditRequestBuilder<'a>
-}
-impl<'a> AppEdit<'a> {
-    pub async fn new(config_request_builder: GooglePlayRequestBuilder<'a>, upload_request_builder: GooglePlayRequestBuilder<'a>) -> Result<AppEdit<'a>, GooglePlayError> {
+impl AppEdit {
+    pub async fn new(request_builder: GooglePlayRequestBuilder) -> Result<AppEdit, GooglePlayError> {
         // https://developers.google.com/android-publisher/api-ref/rest/v3/edits/insert
         // https://developers.google.com/android-publisher/api-ref/rest/v3/edits#AppEdit
-        let edit_info = config_request_builder
-            .build_request(Method::POST, "edits")?
+        let edit_info = request_builder
+            .clone()
+            .method(Method::POST)
+            .join_path("edits")
+            .build()?
             .send()
             .await?
             .json::<AppEditResponse>()
-            .await?;
+            .await?
+            .into_result()?;
 
         Ok(AppEdit{
-            edit_request_builder: EditRequestBuilder::new(config_request_builder, edit_info.id.clone()),
-            upload_request_builder: EditRequestBuilder::new(upload_request_builder, edit_info.id)
+            request_builder: request_builder.edit_id(edit_info.id)
         })
     }
 
@@ -145,8 +122,12 @@ impl<'a> AppEdit<'a> {
                             .expect("Meta set failed"));
 
         // Грузим
-        let response = self.upload_request_builder
-            .build_request(Method::POST, upload_type)?
+        let response = self.request_builder
+            .clone()
+            .upload()
+            .method(Method::POST)
+            .join_path(upload_type)
+            .build()?
             .query(&[
                 ("uploadType", "multipart"),
                 ("ackBundleInstallationWarning", "true")
@@ -184,8 +165,11 @@ impl<'a> AppEdit<'a> {
                 }
             ]
         });
-        let response = self.edit_request_builder
-            .build_request(Method::PUT, &path)?
+        let response = self.request_builder
+            .clone()
+            .method(Method::PUT)
+            .join_path(path)
+            .build()?
             .json(&body)
             .send()
             .await?
@@ -195,26 +179,34 @@ impl<'a> AppEdit<'a> {
         Ok(response)
     }
 
-    pub async fn validate(&self) -> Result<AppEditResponse, GooglePlayError>{
+    pub async fn validate(&self) -> Result<AppEditResponseOk, GooglePlayError>{
         // https://developers.google.com/android-publisher/api-ref/rest/v3/edits/validate
-        let response = self.edit_request_builder
-            .build_request(Method::POST, ":validate")?
+        let response = self.request_builder
+            .clone()
+            .method(Method::POST)
+            .edit_command("validate")
+            .build()?
             .send()
             .await?
             .json::<AppEditResponse>()
-            .await?;
+            .await?
+            .into_result()?;
 
         Ok(response)
     }
 
-    pub async fn commit(&self) -> Result<AppEditResponse, GooglePlayError>{
+    pub async fn commit(&self) -> Result<AppEditResponseOk, GooglePlayError>{
         // https://developers.google.com/android-publisher/api-ref/rest/v3/edits/commit
-        let response = self.edit_request_builder
-            .build_request(Method::POST, ":commit")?
+        let response = self.request_builder
+            .clone()
+            .method(Method::POST)
+            .edit_command("commit")
+            .build()?
             .send()
             .await?
             .json::<AppEditResponse>()
-            .await?;
+            .await?
+            .into_result()?;
 
         Ok(response)
     }

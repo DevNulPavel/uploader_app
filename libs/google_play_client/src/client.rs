@@ -1,20 +1,24 @@
 use std::{
     path::{
         Path
+    },
+    sync::{
+        Arc
     }
 };
 use log::{
     debug, 
     info
 };
-use into_result::{
-    IntoResult
-};
+// use into_result::{
+//     IntoResult
+// };
 use yup_oauth2::{
     AccessToken
 };
 use reqwest::{
-    Client   
+    Client,
+    Url
 };
 use super::{
     request_builder::{
@@ -41,7 +45,7 @@ pub struct GooglePlayUploadTask<'a>{
 
 pub struct GooglePlayClient{
     http_client: Client,
-    token: AccessToken
+    token: Arc<AccessToken>
 }
 impl GooglePlayClient {
     pub fn new(http_client: Client, token: AccessToken) -> GooglePlayClient {
@@ -49,26 +53,19 @@ impl GooglePlayClient {
 
         GooglePlayClient{
             http_client,
-            token   
+            token: Arc::new(token)
         }
     }
 
-    async fn start_insert<'a>(&'a self, package_name: &str) -> Result<AppEdit<'a>, GooglePlayError>{
-        let configure_request_builder = GooglePlayRequestBuilder::new(
+    async fn start_insert<'a>(&self, package_name: &str) -> Result<AppEdit, GooglePlayError>{
+        let request_builder = GooglePlayRequestBuilder::new(
             self.http_client.clone(), 
-            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications",
-            package_name, 
-            &self.token
-        )?;
-        let upload_request_builder = GooglePlayRequestBuilder::new(
-            self.http_client.clone(), 
-            "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications",
-            package_name, 
-            &self.token
-        )?;
+            Url::parse("https://androidpublisher.googleapis.com")?,
+            package_name.to_owned(), 
+            self.token.clone()
+        );
 
-        let edit = AppEdit::new(configure_request_builder, upload_request_builder)
-            .await?;
+        let edit = AppEdit::new(request_builder).await?;
 
         Ok(edit)
     }

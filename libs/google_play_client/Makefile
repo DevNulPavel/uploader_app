@@ -7,3 +7,6 @@ DECRYPT_AUTH:
 
 TEST_LIB_ENTEGRATION: DECRYPT_AUTH
 	cargo test -- integration_test
+
+TEST_REQUEST_BUILDER: 
+	cargo test -- request_builder::tests::test_request_builder --exact --nocapture

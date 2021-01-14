@@ -22,6 +22,7 @@ use super::{
 #[derive(Debug)]
 pub enum GooglePlayError{
     InvalidBaseAddr(String),
+    EmptyUrlSegments,
     URLError(ParseError),
     NetErr(reqwest::Error),
     WrongFilePath,

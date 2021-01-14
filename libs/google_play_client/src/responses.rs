@@ -1,17 +1,17 @@
-use std::{
-    collections::{
-        HashMap
-    }
-};
+// use std::{
+//     collections::{
+//         HashMap
+//     }
+// };
 use serde::{
     Deserialize
 };
 use into_result::{
     IntoResult
 };
-use serde_json::{
-    Value
-};
+// use serde_json::{
+//     Value
+// };
 
 
 #[derive(Deserialize, Debug)]
@@ -31,8 +31,22 @@ pub struct ErrorResponse{
 
 // https://developers.google.com/play/api/v3/reference/files#resource
 #[derive(Deserialize, Debug)]
-pub struct AppEditResponse{
+pub struct AppEditResponseOk{
     pub id: String
+}
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum AppEditResponse{
+    Ok(AppEditResponseOk),
+    Err(ErrorResponse)
+}
+impl IntoResult<AppEditResponseOk, ErrorResponse> for AppEditResponse {
+    fn into_result(self) -> Result<AppEditResponseOk, ErrorResponse> {
+        match self {
+            AppEditResponse::Ok(ok) => Ok(ok),
+            AppEditResponse::Err(err) => Err(err),
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////

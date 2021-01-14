@@ -37,3 +37,8 @@ EXAMPLE_APP_PARAMETERS:
 
 TEST_APP: BUILD
 	bash test_uploading.sh
+
+INSTALL_APP:
+	cargo build --release
+	mkdir -p ../uploader_app_bin
+	yes | cp -rf target/release/uploader_app ../uploader_app_bin/uploader_app 

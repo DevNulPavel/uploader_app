@@ -14,7 +14,8 @@ eval "$(gpg -a -r 0x0BD10E4E6E578FB6 -d test_environment.env.asc)"
 
 # Rust environment setup
 export RUST_BACKTRACE=1
-export RUST_LOG=uploader_app=trace,app_center_client=trace,reqwest=trace
+export RUST_LOG=uploader_app=trace
+# export RUST_LOG=uploader_app=trace,app_center_client=trace,reqwest=trace
 
 # App center
 target/debug/uploader_app \

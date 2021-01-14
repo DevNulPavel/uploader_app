@@ -57,7 +57,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
         http_client.clone(), 
         app_center_env_params.token, 
         app_center_env_params.app, 
-        app_center_env_params.owner
+        app_center_env_params.owner.clone()
     );
     
     // Информация по Git
@@ -92,21 +92,25 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
         match upload_result {
             // Если все хорошо - возвращаем результат
             Ok(result) => {
+                // Финальная ссылка с авторизацией
+                let result_url = format!(
+                    "https://install.appcenter.ms/orgs/{}/apps/{}/releases/{}",
+                    app_center_env_params.owner,
+                    result.app_name,
+                    result.id
+                );
+
                 // Финальное сообщение
-                let message = if let Some(ref url) = result.download_url{
-                    format!(
-                        "App Center uploading finished:\n- {}\n\nLoading url:\n- {}", 
-                        file_name,
-                        url
-                    )
-                }else{
-                    format!("App Center uploading finished:\n- {}", file_name)
-                };
+                let message = format!(
+                    "App Center uploading finished:\n- {}\n\nLoading url:\n- {}", 
+                    file_name,
+                    result_url
+                );
 
                 return Ok(UploadResultData{
                     target: "AppCenter",
                     message: Some(message),
-                    install_url: result.download_url,
+                    install_url: Some(result_url),
                 })
             },
 

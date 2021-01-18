@@ -41,6 +41,10 @@ use super::{
     }
 };
 
+// Главная документация
+// https://developer.amazon.com/docs/app-submission-api/overview.html
+// https://developer.amazon.com/docs/app-submission-api/flows.html
+
 ///////////////////////////////////////////////////////
 
 struct EditRequestBuilder<'a>{
@@ -108,14 +112,22 @@ impl<'a> AppEdit<'a> {
         })      
     }
 
-    async fn get_apks_list(&self) -> Result<Vec<ApkInfoResponse>, AmazonError> {
+    async fn get_apks_list(&self) -> Result<Option<Vec<ApkInfoResponse>>, AmazonError> {
         let resp = self.request_builder
             .build_request(Method::GET, "apks")?
             .send()
-            .await?
-            .json::<Vec<ApkInfoResponse>>()
             .await?;
-        Ok(resp)
+
+        if resp.status() == http::StatusCode::OK {
+            let values = resp
+                .json::<Vec<ApkInfoResponse>>()
+                .await?;
+            Ok(Some(values))
+        } else if resp.status() == http::StatusCode::NO_CONTENT {
+            Ok(None)
+        }else{
+            Err(AmazonError::ApkListFailedWithCode(resp.status()))
+        }
     }
 
     async fn get_etag_for_apk(&self, info: &ApkInfoResponse) -> Result<String, AmazonError> {
@@ -143,8 +155,11 @@ impl<'a> AppEdit<'a> {
         // https://developer.amazon.com/docs/app-submission-api/appsubapi-endpoints.html#/Edits.apks/delete_1
         debug!("Try to deleted: {:#?}", info);
 
+        let etag = self.get_etag_for_apk(info).await?;
+
         let resp = self.request_builder
             .build_request(Method::DELETE, &format!("apks/{}", info.id))?
+            .header("IF-Match", etag)
             .send()
             .await?;
         if resp.status() == 204 {
@@ -155,7 +170,10 @@ impl<'a> AppEdit<'a> {
     }
 
     pub async fn remove_old_apks(&self) -> Result<(), AmazonError> {
-        let old_apks = self.get_apks_list().await?;
+        let old_apks = match self.get_apks_list().await?{
+            Some(apks) => apks,
+            None => return Ok(())
+        };
 
         debug!("Old apks list: {:#?}", old_apks);
 
@@ -178,15 +196,17 @@ impl<'a> AppEdit<'a> {
         Ok(())
     }
 
-    pub async fn upload_new_apk(&self, file_path: &Path) -> Result<(), AmazonError>{
+    pub async fn upload_new_apk(&self, file_path: &Path) -> Result<ApkInfoResponse, AmazonError>{
         // https://developer.amazon.com/docs/app-submission-api/appsubapi-endpoints.html#/Edits.apks/upload_1
 
+        debug!("Uploading started");
+
         // Имя
-        let file_name = file_path
-            .file_name()
-            .ok_or(AmazonError::WrongFilePath)?
-            .to_str()
-            .ok_or(AmazonError::WrongFilePath)?;
+        // let file_name = file_path
+        //     .file_name()
+        //     .ok_or(AmazonError::WrongFilePath)?
+        //     .to_str()
+        //     .ok_or(AmazonError::WrongFilePath)?;
 
         // Файлик в виде стрима
         let file = File::open(file_path).await?;
@@ -196,20 +216,21 @@ impl<'a> AppEdit<'a> {
 
         let response = self.request_builder
             .build_request(Method::POST, "apks/upload")?
+            .header("Content-Type", "application/octet-stream")
             .header("Content-Length", file_length)
-            .header("fileName", file_name)
+            // .header("fileName", file_name)
             .body(body)
             .send()
+            .await?
+            .json::<ApkInfoResponse>()
             .await?;
 
-        if response.status() == 200 {
-            Ok(())
-        }else{
-            Err(AmazonError::UploadingFailedWithCode(response.status()))
-        }
+        debug!("Uploading finished: {:#?}", response);
+
+        Ok(response)
     }
 
-    pub async fn validate(&self) -> Result<AmazonEditRespone, AmazonError>{
+    /*pub async fn validate(&self) -> Result<AmazonEditRespone, AmazonError>{
         // https://developer.amazon.com/docs/app-submission-api/appsubapi-endpoints.html#/Edits/validateEdit_1
         let response = self.request_builder
             .build_request(Method::POST, "validate")?
@@ -219,9 +240,9 @@ impl<'a> AppEdit<'a> {
             .await?;
 
         Ok(response)
-    }
+    }*/
 
-    async fn commit_apk<'b>(&self, info: &'b ApkInfoResponse) -> Result<(&'b ApkInfoResponse, AmazonEditRespone), AmazonError>{
+    /*pub async fn commit_apk<'b>(&self, info: &'b ApkInfoResponse) -> Result<AmazonEditRespone, AmazonError>{
         debug!("Commit with info: {:#?}", info);
 
         let etag = self
@@ -235,27 +256,6 @@ impl<'a> AppEdit<'a> {
             .json::<AmazonEditRespone>()
             .await?;
 
-        Ok((info, response))
-    }
-
-    pub async fn commit(&self) -> Result<(), AmazonError>{
-        // https://developer.amazon.com/docs/app-submission-api/appsubapi-endpoints.html#/Edits/validateEdit_1
-
-        let apks = self.get_apks_list().await?;
-        
-        let futures_iter = apks
-            .iter()
-            .map(|info|{
-                self.commit_apk(info)
-            });
-        
-        let results = join_all(futures_iter).await;
-
-        for result in results{
-            let (info, result) = result?;
-            debug!("Apk commit for {} success: {:#?}", info.id, result);
-        }
-
-        Ok(())
-    }
+        Ok(response)
+    }*/
 }

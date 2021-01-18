@@ -63,7 +63,7 @@ async fn library_integration_test(){
     
     debug!("Token: {:#?}", token_str);
 
-    let file_path = Path::new("test_file");
+    let file_path = Path::new("/Users/devnul/Downloads/amazon-app-release.apk");
 
     let client = AmazonClient::new(http_client, token);
     let task = AmazonUploadTask{

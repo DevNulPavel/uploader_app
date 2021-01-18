@@ -29,6 +29,8 @@ pub enum AmazonError{
     StartEditFailed,
     ETagReceiveFailed,
     ETagParseFailed,
+    EmptyApksForCommit,
+    ApkListFailedWithCode(StatusCode),
     ApkDeleteFailedWithCode(StatusCode),
     UploadingFailedWithCode(StatusCode),
     Custom(String),

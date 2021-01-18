@@ -19,9 +19,9 @@ export RUST_LOG=uploader_app=trace
 
 # App center
 target/debug/uploader_app \
-    --app_center_input_file "/Users/devnul/Downloads/Island2-Android-qc-1130--2020.12.28_18.23-tf_12.10.0_giads_kinesis-400cd90.apk" \
+    --app_center_input_file "/Users/devnul/Downloads/app-release.apk" \
     --app_center_build_description "Test description" \
-    --app_center_distribution_groups "Paradise Island 2 Team","Collaborators"
+    --app_center_distribution_groups '"Paradise Island 2 Team","Collaborators"'
 
 # Google drive
 # --google_drive_target_domain ""

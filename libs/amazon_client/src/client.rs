@@ -64,11 +64,11 @@ impl AmazonClient {
 
         edit.remove_old_apks().await?;
 
-        edit.upload_new_apk(task.file_path).await?;
+        let _info = edit.upload_new_apk(task.file_path).await?;
 
-        edit.validate().await?;
-
-        edit.commit().await?;
+        // Валидация и коммит вроде как запрещены текущим аккаунтом, делаем лишь выгрузку
+        // edit.validate().await?;
+        // edit.commit_apk(&info).await?;
 
         Ok(())
     }

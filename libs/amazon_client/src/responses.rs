@@ -25,7 +25,6 @@ pub struct AmazonEditRespone{
     pub status: String,
 }
 
-
 // https://developer.amazon.com/docs/app-submission-api/appsubapi-endpoints.html#/Edits.apks/get_2
 #[derive(Deserialize, Debug)]
 pub struct ApkInfoResponse{

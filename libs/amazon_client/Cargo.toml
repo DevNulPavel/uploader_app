@@ -16,6 +16,7 @@ serde = {version="1.0.116", features=["derive"]}
 serde_json = "1.0.57"
 log = "0.4.11"
 url = "2.2.0"
+http = "0.2.2"
 tokio = {version="0.2.24", default-features = false, features = ["fs", "io-util", "rt-util"]}
 tokio-util = {version = "0.3.1", features = ["codec"]}
 

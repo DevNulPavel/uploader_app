@@ -11,7 +11,8 @@ pub use self::{
     client::{
         AppCenterClient,
         AppCenterBuildUploadTask,
-        AppCenterBuildGitInfo
+        AppCenterBuildGitInfo,
+        AppCenterBuildVersionInfo
     },
     error::{
         AppCenterError

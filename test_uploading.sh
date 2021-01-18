@@ -1,8 +1,8 @@
 #! /usr/bin/env bash
 
 # Json auth
-rm -rf test_google_drive_auth.json
-gpg -a -r 0x0BD10E4E6E578FB6 -o test_google_drive_auth.json -d test_google_drive_auth.json.asc
+rm -rf test_google_drive_my_auth.json
+gpg -a -r 0x0BD10E4E6E578FB6 -o test_google_drive_my_auth.json -d test_google_drive_my_auth.json.asc
 
 # Import test environment
 eval "$(gpg -a -r 0x0BD10E4E6E578FB6 -d test_environment.env.asc)"
@@ -14,14 +14,16 @@ eval "$(gpg -a -r 0x0BD10E4E6E578FB6 -d test_environment.env.asc)"
 
 # Rust environment setup
 export RUST_BACKTRACE=1
-export RUST_LOG=uploader_app=trace
-# export RUST_LOG=uploader_app=trace,app_center_client=trace,reqwest=trace
+# export RUST_LOG=uploader_app=trace
+export RUST_LOG=uploader_app=trace,app_center_client=trace,reqwest=trace
 
 # App center
 target/debug/uploader_app \
     --app_center_input_file "/Users/devnul/Downloads/app-release.apk" \
     --app_center_build_description "Test description" \
-    --app_center_distribution_groups '"Paradise Island 2 Team","Collaborators"'
+    --app_center_distribution_groups 'Paradise Island 2 Team','Collaborators' \
+    --app_center_build_version '12.9.4' \
+    --app_center_build_code '376' \
 
 # Google drive
 # --google_drive_target_domain ""

@@ -19,6 +19,7 @@ use log::{
 use app_center_client::{
     AppCenterClient,
     AppCenterBuildGitInfo,
+    AppCenterBuildVersionInfo,
     AppCenterBuildUploadTask,
 };
 use crate::{
@@ -68,6 +69,20 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
                 commit: git.git_commit
             }
         });
+        
+    // Инфа по версии
+    let version = match (app_center_app_params.build_version, app_center_app_params.build_code) {
+        (Some(version), Some(code)) => {
+            let code = code.parse::<u32>()?;
+            Some(AppCenterBuildVersionInfo{
+                build_code: code,
+                version
+            })
+        },
+        _ => {
+            None
+        }
+    };
     
     // Таска на выгрузку
     let task = AppCenterBuildUploadTask{
@@ -75,6 +90,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
         distribution_groups: app_center_app_params.distribution_groups,
         build_description: app_center_app_params.build_description,
         git_info,
+        version_info: version,
         upload_threads_count: 10
     };
 
@@ -102,7 +118,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
 
                 // Финальное сообщение
                 let message = format!(
-                    "App Center uploading finished:\n- {}\nLoading url:\n- {}", 
+                    "App Center uploading finished:\n- file: {}\n- url: {}", 
                     file_name,
                     result_url
                 );

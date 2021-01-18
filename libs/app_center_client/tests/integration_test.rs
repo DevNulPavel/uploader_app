@@ -16,6 +16,7 @@ use reqwest::{
 use app_center_client::{
     AppCenterClient,
     AppCenterBuildGitInfo,
+    AppCenterBuildVersionInfo,
     AppCenterBuildUploadTask
 };
 
@@ -64,11 +65,16 @@ async fn library_integration_test(){
         branch: "test_branch_name".to_owned(),
         commit: "aaabbbcccddd1234242343234".to_owned()
     };
+    let version_info = AppCenterBuildVersionInfo{
+        build_code: 376,
+        version: "12.9.4".to_owned()
+    };
 
     let task = AppCenterBuildUploadTask{
         file_path: file_path.as_path(),
         distribution_groups: Some(groups),
         build_description: Some(description),
+        version_info: Some(version_info),
         git_info: Some(git_info),
         upload_threads_count: 10
     };

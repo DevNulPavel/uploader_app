@@ -44,6 +44,11 @@ use super::{
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
+pub struct AppCenterBuildVersionInfo{
+    pub version: String,
+    pub build_code: u32
+}
+
 pub struct AppCenterBuildGitInfo{
     pub branch: String,
     pub commit: String
@@ -53,6 +58,7 @@ pub struct AppCenterBuildUploadTask<'a>{
     pub file_path: &'a Path,
     pub distribution_groups: Option<Vec<String>>,
     pub build_description: Option<String>,
+    pub version_info: Option<AppCenterBuildVersionInfo>,
     pub git_info: Option<AppCenterBuildGitInfo>,
     pub upload_threads_count: usize
 }
@@ -82,9 +88,26 @@ impl AppCenterClient {
         }
     }
 
-    async fn initialize_release(&self) -> Result<ReleasesResponse, AppCenterError>{
-        let releases_resp = self.request_builder
-            .build_request(APPLICATION, Method::POST, "uploads/releases", true)?
+    async fn initialize_release(&self, version: &Option<AppCenterBuildVersionInfo>) -> Result<ReleasesResponse, AppCenterError>{
+        // Базовый запрос
+        let req = self
+            .request_builder
+            .build_request(APPLICATION, Method::POST, "uploads/releases", true)?;
+        
+        // Закидываем версию
+        let req = if let Some(v) = version{
+            let json_data = json!({
+                "build_version": v.version,
+                "build_number": format!("{}", v.build_code)
+            });
+            req
+                .json(&json_data)
+        }else{
+            req
+        };
+        
+        // Выполняем
+        let releases_resp = req
             .send()
             .await?
             .json::<ReleasesResponse>()
@@ -264,7 +287,7 @@ impl AppCenterClient {
     pub async fn upload_build(&self, task: &AppCenterBuildUploadTask<'_>) -> Result<ReleaseInfoResponse, AppCenterError>{
         // Инициирование отгрузки
         let release_info = self
-            .initialize_release()
+            .initialize_release(&task.version_info)
             .await?;
 
         // Выгрузка файлика

@@ -21,7 +21,9 @@ params_data_type!(
         }
         Opt{ 
             symbols_file: "app_center_symbols_file" : "App center symbols file",
-            build_description: "app_center_build_description": "App center build description"
+            build_description: "app_center_build_description": "App center build description",
+            build_version: "app_center_build_version": "App center build version",
+            build_code: "app_center_build_code": "App center build code"
         }
         MultOpt{
             distribution_groups: "app_center_distribution_groups": "App center distribution groups"

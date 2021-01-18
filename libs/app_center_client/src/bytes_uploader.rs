@@ -50,7 +50,7 @@ async fn upload_file_chunk(http_client: &Client,
                            total_chunks: usize,
                            data: Bytes) -> Result<usize, AppCenterError>{
 
-    debug!("Chunk number {}/{} upload started with data length: {}", chunk_number, total_chunks, data.len());
+    debug!("Chunk number {}/{} upload started with data length: {}", chunk_number+1, total_chunks, data.len());
 
     let url = format!("{}/upload/upload_chunk/{}",
                         release_info.upload_domain,

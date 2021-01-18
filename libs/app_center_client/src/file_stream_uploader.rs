@@ -185,7 +185,6 @@ impl<'a> AppCenterUploader<'a> {
 
         let mut futures_vec = Vec::with_capacity(self.upload_threads_count);
 
-        
         let mut total_uploaded_size = 0;
         let chunks_count = upload_info.chunk_list.len();
         for i in 0..chunks_count {
@@ -217,7 +216,7 @@ impl<'a> AppCenterUploader<'a> {
 
                 // Берем только нужное количество данных из файлика
                 // TODO: Почему-то работает криво, используем Content-Length для ограничения
-                // let file = file.take(buffer_size as u64);
+                let file = file.take(buffer_size as u64);
 
                 // Файлик преобразуем в stream
                 let stream = tokio_util::codec::FramedRead::new(file, tokio_util::codec::BytesCodec::new());

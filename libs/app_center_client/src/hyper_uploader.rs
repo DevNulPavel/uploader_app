@@ -51,16 +51,19 @@ async fn upload_file_chunk<C>(http_client: &hyper::Client<C>,
 where
     C: hyper::client::connect::Connect + Send + Sync + Clone + 'static {
 
-    debug!("Chunk number {}/{} upload started with data length: {}", chunk_number, total_chunks, data.len());
-
     let url = format!("{}/upload/upload_chunk/{}?token={}&block_number={}",
                         release_info.upload_domain,
                         release_info.package_asset_id,
                         release_info.url_encoded_token,
-                        chunk_number
+                        chunk_number + 1
                     );
 
-    debug!("Chunk upload url: {}", url);
+    debug!("Chunk number {}/{} upload started with data length: {}, url: {}", 
+        chunk_number + 1, 
+        total_chunks, 
+        data.len(), 
+        url
+    );
     
     let length = data.len();
     let body = hyper::Body::from(data);
@@ -193,6 +196,8 @@ impl<'a> AppCenterUploader<'a> {
         let https = hyper_rustls::HttpsConnector::new();
         let client = hyper::Client::builder().build(https);
 
+        let mut total_upload_length = 0;
+
         let mut futures_vec = Vec::with_capacity(self.upload_threads_count);
 
         let chunks_count = upload_info.chunk_list.len();
@@ -217,6 +222,8 @@ impl<'a> AppCenterUploader<'a> {
                     .read_exact(&mut buffer)
                     .await?;
 
+                total_upload_length += buffer.len();
+
                 assert_eq!(read_count, buffer_size as usize, "Invalid read size from file");
 
                 buffer
@@ -239,6 +246,9 @@ impl<'a> AppCenterUploader<'a> {
                 futures_vec = left_futures;
             }
         }
+
+        assert_eq!(futures_vec.len(), 0, "Invalid futures count at finish");
+        assert_eq!(total_upload_length as u64, self.file_length, "Invalid uploaded file length");
 
         debug!("Uploading loop finished");
 

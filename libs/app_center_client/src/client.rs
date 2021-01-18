@@ -31,12 +31,12 @@ use super::{
     // bytes_uploader::{
     //     AppCenterUploader
     // },
-    file_stream_uploader::{
-        AppCenterUploader
-    },
-    // hyper_uploader::{
+    // file_stream_uploader::{
     //     AppCenterUploader
     // },
+    hyper_uploader::{
+        AppCenterUploader
+    },
     error::{
         AppCenterError
     }

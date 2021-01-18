@@ -54,7 +54,7 @@ async fn library_integration_test(){
     let client = AppCenterClient::new(Client::new(), token, app_name, app_owner);
 
     let file_path = PathBuf::from("/Users/devnul/Downloads/\
-                                  Island2-Android-qc-1130--2020.12.28_18.23-tf_12.10.0_giads_kinesis-400cd90.apk");
+                                    app-release.apk");
     let groups = vec![
         "Paradise Island 2 Team".to_owned(),
         "Collaborators".to_owned()

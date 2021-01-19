@@ -40,6 +40,7 @@ use self::{
         upload_in_google_play,
         upload_in_amazon,
         upload_in_ios,
+        upload_by_ssh,
         UploadResult
     },
     result_senders::{
@@ -158,6 +159,17 @@ fn build_uploaders(http_client: reqwest::Client,
         (Some(env_params), Some(app_params)) => {
             info!("IOS uploading task created");
             let fut = upload_in_ios(env_params, 
+                                    app_params).boxed();
+            active_workers.push(fut);
+        },
+        _ => {}
+    }
+
+    // Создаем задачу выгрузки на SSH сервер
+    match (env_params.ssh, app_parameters.ssh) {
+        (Some(env_params), Some(app_params)) => {
+            info!("SSH uploading task created");
+            let fut = upload_by_ssh(env_params, 
                                     app_params).boxed();
             active_workers.push(fut);
         },

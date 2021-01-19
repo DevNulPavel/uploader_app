@@ -1,3 +1,6 @@
+TEST_SSH_UPLOADING:
+	cargo test -- uploaders::ssh::tests::test_ssh_uploader
+
 BUILD:
 	cargo build
 

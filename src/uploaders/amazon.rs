@@ -9,6 +9,7 @@ use log::{
 use amazon_client::{
     AmazonClient,
     AmazonUploadTask,
+    AmazonAccessToken,
     request_token
 };
 use crate::{
@@ -29,7 +30,7 @@ pub async fn upload_in_amazon(http_client: reqwest::Client,
                               env_params: AmazonEnvironment, 
                               app_params: AmazonParams) -> UploadResult {
 
-    let token = request_token(&http_client, &env_params.client_id, &env_params.client_secret)
+    let token: AmazonAccessToken = request_token(&http_client, &env_params.client_id, &env_params.client_secret)
         .await?;
 
     let token_str = token

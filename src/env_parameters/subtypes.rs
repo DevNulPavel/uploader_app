@@ -82,10 +82,10 @@ env_params_type!(
     SSHEnvironment{
         Req{
             server: "SSH_SERVER",
-            user: "SSH_USER",
-            pass: "SSH_PASS"
+            user: "SSH_USER"
         }
         Opt{ 
+            pass: "SSH_PASS",
             key_file: "SSH_PRIVATE_KEY_PATH" 
         }
     }

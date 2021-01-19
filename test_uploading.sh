@@ -18,13 +18,13 @@ export RUST_BACKTRACE=1
 export RUST_LOG=uploader_app=trace,app_center_client=trace,reqwest=trace
 
 # App center
-params=()
-params+=(--app_center_input_file "/Users/devnul/Downloads/app-release.apk")
-params+=(--app_center_build_description "Test description")
-params+=(--app_center_distribution_groups 'Paradise Island 2 Team','Collaborators')
-params+=(--app_center_build_version '12.9.4')
-params+=(--app_center_build_code '376')
-target/debug/uploader_app "${params[@]}"
+UPLOAD_PARAMS=()
+UPLOAD_PARAMS+=(--app_center_input_file "/Users/devnul/Downloads/app-release.apk")
+UPLOAD_PARAMS+=(--app_center_build_description "Test description")
+UPLOAD_PARAMS+=(--app_center_distribution_groups 'Paradise Island 2 Team','Collaborators')
+UPLOAD_PARAMS+=(--app_center_build_version '12.9.4')
+UPLOAD_PARAMS+=(--app_center_build_code '376')
+target/debug/uploader_app "${UPLOAD_PARAMS[@]}"
 
 # Google drive
 # --google_drive_target_domain ""

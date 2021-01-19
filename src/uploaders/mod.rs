@@ -4,6 +4,7 @@ mod google_drive;
 mod google_play;
 mod amazon;
 mod ios;
+mod ssh;
 
 pub use self::{
     upload_result::{
@@ -24,5 +25,8 @@ pub use self::{
     },
     ios::{
         upload_in_ios
+    },
+    ssh::{
+        upload_by_ssh
     }
 };

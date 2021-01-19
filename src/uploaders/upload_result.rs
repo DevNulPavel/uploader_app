@@ -20,4 +20,7 @@ impl Display for UploadResultData {
     }
 }
 
-pub type UploadResult = std::result::Result<UploadResultData, Box<dyn std::error::Error>>;
+pub type UploadResult = std::result::Result<
+    UploadResultData, 
+    Box<dyn std::error::Error>
+>;

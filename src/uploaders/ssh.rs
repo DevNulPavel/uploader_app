@@ -329,12 +329,12 @@ mod tests{
     async fn test_ssh_uploader(){
         pretty_env_logger::formatted_builder()
             // .is_test(true)
-            .filter_level(log::LevelFilter::Trace)
+            .filter_level(log::LevelFilter::Debug)
             .try_init()
             .ok();
 
         let env_params = SSHEnvironment{
-            server: "mur-st-mike.game-insight.tech".to_owned(), // TODO: DNS name
+            server: "10.51.254.143".to_owned(), // TODO: DNS name
             user: "jenkins".to_owned(),
             key_file: Some("/Users/devnul/.ssh/id_rsa".to_owned()),
             pass: None,
@@ -343,7 +343,7 @@ mod tests{
             files: vec![
                 "/Users/devnul/Downloads/Discord.dmg".to_owned()
             ],
-            target_dir: "~/test_folder_123".to_owned()
+            target_dir: "/volume1/builds/pi2-gplay/test_folder".to_owned()
         };
 
         upload_by_ssh(env_params, app_params)

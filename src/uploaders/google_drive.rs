@@ -37,17 +37,23 @@ pub async fn upload_in_google_drive(client: reqwest::Client, env_params: GoogleD
     // Содержимое Json файлика ключа 
     let key = read_service_account_key(env_params.auth_file)
         .await?;
+    
+    debug!("Google drive key read success");
 
     // Аутентификация на основе прочитанного файлика
     let auth = ServiceAccountAuthenticator::builder(key)
           .build()
           .await?;
+
+    debug!("Google drive auth success");
  
     // Add the scopes to the secret and get the token.
     let token = auth
         .token(&["https://www.googleapis.com/auth/drive"])
         .await?;
         
+    debug!("Google drive token received");
+
     // Клиент
     let client = GoogleDriveClient::new(client, token);
 
@@ -67,6 +73,8 @@ pub async fn upload_in_google_drive(client: reqwest::Client, env_params: GoogleD
             folder
         }
     };
+
+    debug!("Google drive target folder received: {}", folder.get_info().id);
 
     // Грузим файлы
     let mut results = Vec::with_capacity(app_params.files.len());

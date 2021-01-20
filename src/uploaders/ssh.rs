@@ -11,7 +11,8 @@ use std::{
     net::{
         TcpStream,
         SocketAddrV4,
-        Ipv4Addr
+        Ipv4Addr,
+        IpAddr
     },
     fmt::{
         Display,
@@ -68,6 +69,7 @@ enum SshError{
     SshErr(ssh2::Error),
     IO(io::Error),
     DNSError(ResolveError),
+    IpV6IsUnsupported,
     EmptyDNSAddresses,
     PrivateKeyNotFound,
     AuthFailed,
@@ -114,7 +116,14 @@ fn get_valid_address(server: String) -> Result<String, SshError> {
             .iter()
             .next()
             .ok_or(SshError::EmptyDNSAddresses)?;
-        address.to_string()
+        match address {
+            IpAddr::V4(v4) => {
+                SocketAddrV4::new(v4, 22).to_string()
+            },
+            _ => {
+                return Err(SshError::IpV6IsUnsupported);
+            }
+        }
     };
     Ok(addr)
 }
@@ -325,8 +334,8 @@ mod tests{
             .ok();
 
         let env_params = SSHEnvironment{
-            server: "192.168.1.2".to_owned(), // TODO: DNS name
-            user: "pi".to_owned(),
+            server: "mur-st-mike.game-insight.tech".to_owned(), // TODO: DNS name
+            user: "jenkins".to_owned(),
             key_file: Some("/Users/devnul/.ssh/id_rsa".to_owned()),
             pass: None,
         };

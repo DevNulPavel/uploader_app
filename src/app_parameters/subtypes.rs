@@ -39,7 +39,7 @@ params_data_type!(
             target_folder_id : "google_drive_target_folder_id" : "Google drive folder ID"
         }
         Opt{
-            target_subfolder_name : "google_drive_subfolder_name" : "Google drive subfolder name",
+            target_subfolder_name : "google_drive_target_subfolder_name" : "Google drive subfolder name",
             target_owner_email : "google_drive_target_owner_email" : "Google drive folder owner email",
             target_domain: "google_drive_target_domain" : "Google drive shared domain"
         }

@@ -94,7 +94,7 @@ pub async fn upload_in_google_drive(client: reqwest::Client, env_params: GoogleD
     }
 
     // Финальное сообщение
-    let message_begin = format!("Google drive folder:\n- \"{}\"\n  {}\nFiles:", 
+    let message_begin = format!("Google drive folder:\n- \"{}\"\n  {}\n\nFiles:", 
                                     folder.get_info().name, 
                                     folder.get_info().web_view_link);
     let message = results

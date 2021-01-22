@@ -101,11 +101,20 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
 
     // Проверим ошибку
     if child.status.code() != Some(0) {
+        let output = String::from_utf8(child.stdout)
+            .map_err(|err|{
+                IOSError::ErrorParseFailed(err)
+            })?;
         let err = String::from_utf8(child.stderr)
             .map_err(|err|{
                 IOSError::ErrorParseFailed(err)
             })?;
-        let error_text = format!("Spawn failed with code {:?} and error: {}", child.status.code(), err);
+        let error_text = format!(
+            "Spawn failed with code {:?}\nStdOut: '{}'\nStdError: '{}'", 
+            child.status.code(),
+            output, 
+            err
+        );
 
         return Err(Box::new(IOSError::InvalidSpawn(error_text)));
     }        

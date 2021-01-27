@@ -99,6 +99,8 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
         .wait_with_output()
         .await?;
 
+    // TODO: Как-то не очень хорошо получается вывод
+
     // Проверим ошибку
     if child.status.code() != Some(0) {
         let output = String::from_utf8(child.stdout)

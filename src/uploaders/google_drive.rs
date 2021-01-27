@@ -100,7 +100,7 @@ pub async fn upload_in_google_drive(client: reqwest::Client, env_params: GoogleD
     let message = results
         .into_iter()
         .fold(message_begin, |prev, res|{
-            format!("{}\n- {}\n  {}", prev, res.file_name, res.web_view_link)
+            format!("{}\n- {}\n  + {}", prev, res.file_name, res.web_view_link)
         });
 
     Ok(UploadResultData{

@@ -118,7 +118,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
 
                 // Финальное сообщение
                 let message = format!(
-                    "App Center uploading finished:\n- file: {}\n- url: {}", 
+                    "App Center uploading finished:\n- {}\n  + {}", 
                     file_name,
                     result_url
                 );

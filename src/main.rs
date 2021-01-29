@@ -1,7 +1,7 @@
 mod env_parameters;
 mod app_parameters;
 mod uploaders;
-mod result_senders;
+mod result_receivers;
 
 use std::{
     pin::{
@@ -43,8 +43,8 @@ use self::{
         upload_by_ssh,
         UploadResult
     },
-    result_senders::{
-        ResultSender,
+    result_receivers::{
+        ResultReceiver,
         SlackResultSender,
         TerminalSender
     }
@@ -54,7 +54,8 @@ async fn wait_results<W, S>(mut active_workers: Vec<W>,
                             mut result_senders: Vec<Box<S>>)
 where 
     W: Future<Output=UploadResult> + Unpin,
-    S: ResultSender + ?Sized {
+    S: ResultReceiver + ?Sized 
+{
 
     // Смотрим на завершающиеся воркеры
     while active_workers.len() > 0 {
@@ -75,7 +76,7 @@ where
                 let futures_iter = result_senders
                     .iter_mut()
                     .map(|sender|{
-                        sender.send_result(&res)
+                        sender.on_result_received(res.as_ref())
                     });
                 join_all(futures_iter).await;
             },
@@ -84,7 +85,7 @@ where
                 let futures_iter = result_senders
                     .iter_mut()
                     .map(|sender|{
-                        sender.send_error(err.as_ref())
+                        sender.on_error_received(err.as_ref())
                     });
                 join_all(futures_iter).await;
 
@@ -211,7 +212,7 @@ async fn async_main() {
 
     // Получаетели результатов выгрузки
     let result_senders = {
-        let mut result_senders: Vec<Box<dyn ResultSender>> = Vec::new();
+        let mut result_senders: Vec<Box<dyn ResultReceiver>> = Vec::new();
 
         // Создаем клиента для слака если надо отправлять результаты в слак
         if let Some(slack_params) = result_slack{

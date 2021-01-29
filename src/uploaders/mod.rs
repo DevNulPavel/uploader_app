@@ -9,7 +9,8 @@ mod ssh;
 pub use self::{
     upload_result::{
         UploadResult,
-        UploadResultData
+        UploadResultData,
+        UploadResultMessage
     },
     app_center::{
         upload_in_app_center

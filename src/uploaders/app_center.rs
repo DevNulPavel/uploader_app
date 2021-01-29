@@ -34,9 +34,69 @@ use crate::{
 use super::{
     upload_result::{
         UploadResult,
-        UploadResultData
+        UploadResultData,
+        UploadResultMessage
     }
 };
+
+//////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+struct AppCenterUploadMessage{
+    markdown: String,
+    plain: String,
+}
+impl UploadResultMessage for AppCenterUploadMessage {
+    fn get_markdown(&self) -> &str {
+        &self.markdown
+    }
+    fn get_plain(&self) -> &str {
+        &self.plain
+    }
+}
+
+//////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+struct AppCenterUploadResult {
+    message: AppCenterUploadMessage,
+    qr_data: String
+}
+impl AppCenterUploadResult{
+    fn new(file_name: String, result_url: String) -> AppCenterUploadResult {
+        let markdown = format!(
+            "App Center uploading finished:\n- [{}]({})", 
+            file_name, 
+            result_url
+        );
+        let plain = format!(
+            "App Center uploading finished:\n- file: {}\n- url: {}", 
+            file_name, 
+            result_url
+        );
+        let message = AppCenterUploadMessage{
+            markdown,
+            plain 
+        };
+        AppCenterUploadResult{
+            message,
+            qr_data: result_url
+        }
+    }
+}
+impl UploadResultData for AppCenterUploadResult {
+    fn get_target(&self) -> &'static str {
+        "AppCenter"   
+    }
+    fn get_message(&self) -> Option<&dyn UploadResultMessage> {
+        Some(&self.message)
+    }
+    fn get_qr_data(&self) -> Option<&str> {
+        Some(&self.qr_data)
+    }
+}
+
+//////////////////////////////////////////////////////////////////
 
 pub async fn upload_in_app_center(http_client: reqwest::Client, 
                                   app_center_env_params: AppCenterEnvironment,
@@ -117,17 +177,9 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
                 );
 
                 // Финальное сообщение
-                let message = format!(
-                    "App Center uploading finished:\n- {}\n  + {}", 
-                    file_name,
-                    result_url
-                );
+                let res = AppCenterUploadResult::new(file_name.to_owned(), result_url);
 
-                return Ok(UploadResultData{
-                    target: "AppCenter",
-                    message: Some(message),
-                    install_url: Some(result_url),
-                })
+                return Ok(Box::new(res))
             },
 
             // Если все плохо - делаем несколько попыток c паузой

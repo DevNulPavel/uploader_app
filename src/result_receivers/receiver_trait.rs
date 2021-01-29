@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[async_trait(?Send)]
-pub trait ResultSender {
-    async fn send_result(&mut self, result: &UploadResultData);
-    async fn send_error(&mut self, err: &dyn Error);
+pub trait ResultReceiver {
+    async fn on_result_received(&mut self, result: &dyn UploadResultData);
+    async fn on_error_received(&mut self, err: &dyn Error);
 }

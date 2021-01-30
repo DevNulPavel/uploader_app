@@ -2254,7 +2254,7 @@ checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 [[package]]
 name = "slack_client_lib"
 version = "1.1.0"
-source = "git+https://github.com/DevNulPavel/slack_client_lib.git?rev=3397268383ae7cf6fb9a40b0460a2335ed7ce928#3397268383ae7cf6fb9a40b0460a2335ed7ce928"
+source = "git+https://github.com/DevNulPavel/slack_client_lib.git?rev=581d6a41b185d1b8a5e4f7f30ce1c8671e62c0f9#581d6a41b185d1b8a5e4f7f30ce1c8671e62c0f9"
 dependencies = [
  "async-trait",
  "futures",

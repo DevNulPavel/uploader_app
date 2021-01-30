@@ -6,6 +6,10 @@ use std::{
 use log::{
     debug
 };
+use serde_json::{
+    Value,
+    json
+};
 use amazon_client::{
     AmazonClient,
     AmazonUploadTask,
@@ -30,14 +34,15 @@ use crate::{
 
 #[derive(Debug)]
 struct AmazonUploadMessage{
-    text: String
+    plain: String,
+    blocks: Vec<Value>
 }
 impl UploadResultMessage for AmazonUploadMessage {
-    fn get_markdown(&self) -> &str {
-        &self.text
+    fn get_slack_blocks(&self) -> &[Value] {
+        self.blocks.as_slice()   
     }
     fn get_plain(&self) -> &str {
-        &self.text
+        &self.plain
     }
 }
 
@@ -46,6 +51,26 @@ impl UploadResultMessage for AmazonUploadMessage {
 #[derive(Debug)]
 struct AmazonUploadResult{
     message: AmazonUploadMessage
+}
+impl AmazonUploadResult{
+    fn new(file_name: &str) -> AmazonUploadResult {
+        let formatted_text = format!("Amazon uploading finished:\n- {}", file_name);
+        let message = AmazonUploadMessage{
+            plain: formatted_text.clone(),
+            blocks: vec![
+                json!({
+                    "type": "section", 
+                    "text": {
+                        "type": "mrkdwn", 
+                        "text": formatted_text
+                    }
+                })
+            ]
+        };
+        AmazonUploadResult{
+            message
+        }
+    }
 }
 impl UploadResultData for AmazonUploadResult {
     fn get_target(&self) -> &'static str {
@@ -94,11 +119,7 @@ pub async fn upload_in_amazon(http_client: reqwest::Client,
         .ok_or("Amazon: Invalid file name")?;
 
     // Финальное сообщение
-    let res = AmazonUploadResult{
-        message: AmazonUploadMessage{
-            text: format!("Amazon uploading finished:\n- {}", file_name)
-        }
-    };
+    let res = AmazonUploadResult::new(file_name);
 
     Ok(Box::new(res))
 }

@@ -37,6 +37,10 @@ use log::{
 use ssh2::{
     Session
 };
+use serde_json::{
+    Value,
+    json
+};
 use trust_dns_resolver::{
     config::{
         ResolverConfig,
@@ -58,7 +62,8 @@ use crate::{
 use super::{
     upload_result::{
         UploadResult,
-        UploadResultData
+        UploadResultData,
+        UploadResultMessage
     }
 };
 
@@ -97,6 +102,68 @@ impl From<io::Error> for SshError{
 impl From<ResolveError> for SshError{
     fn from(err: ResolveError) -> Self {
         SshError::DNSError(err)
+    }
+}
+
+//////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+struct SshUploadMessage{
+    text: String,
+    blocks: Vec<Value>
+}
+impl UploadResultMessage for SshUploadMessage {
+    fn get_slack_blocks(&self) -> &[Value] {
+        self.blocks.as_slice()   
+    }
+    fn get_plain(&self) -> &str {
+        &self.text
+    }
+}
+
+//////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+struct SshUploadResult{
+    message: SshUploadMessage
+}
+impl SshUploadResult{
+    fn new(file_names: Vec<&str>) -> SshUploadResult {
+        // Финальное сообщение
+        let names_str = file_names
+            .into_iter()
+            .fold(String::new(), |mut prev, n|{
+                prev.push_str(&format!("\n- {}", n));
+                prev
+            });
+        let formatted_text = format!("SSH uploading finished:{}", names_str);
+
+        let message = SshUploadMessage{
+            text: formatted_text.clone(),
+            blocks: vec![
+                json!({
+                    "type": "section", 
+                    "text": {
+                        "type": "mrkdwn", 
+                        "text": formatted_text
+                    }
+                })
+            ]
+        };
+        SshUploadResult{
+            message
+        }
+    }
+}
+impl UploadResultData for SshUploadResult {
+    fn get_target(&self) -> &'static str {
+        "SSH"   
+    }
+    fn get_message(&self) -> Option<&dyn UploadResultMessage> {
+        Some(&self.message)
+    }
+    fn get_qr_data(&self) -> Option<&str> {
+        None
     }
 }
 
@@ -254,7 +321,7 @@ where
 
 pub async fn upload_by_ssh(env_params: SSHEnvironment, 
                            app_params: SSHParams) -> UploadResult {
-    let join: JoinHandle<Result<UploadResultData, SshError>> = spawn_blocking(move || {
+    let join: JoinHandle<Result<SshUploadResult, SshError>> = spawn_blocking(move || {
         // Тип аддреса
         let addr = get_valid_address(env_params.server)?;
         debug!("SSH server address: {}", addr);
@@ -298,25 +365,12 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment,
         // Грузим
         let local_filenames = upload_files(&session, &result_absolute_folder_path, &paths)?;
 
-        // Финальное сообщение
-        let names_str = local_filenames
-            .into_iter()
-            .fold(String::new(), |mut prev, n|{
-                prev.push_str(&format!("\n- {}", n));
-                prev
-            });
-        let message = format!("SSH uploading finished:{}", names_str);
-
-        Ok(UploadResultData{
-            install_url: None,
-            message: Some(message),
-            target: "SSH"
-        })
+        Ok(SshUploadResult::new(local_filenames))
     });
 
     let result = join.await.expect("SSH join failed");
     match result {
-        Ok(res) => Ok(res),
+        Ok(res) => Ok(Box::new(res)),
         Err(err) => Err(Box::new(err))
     }
 }

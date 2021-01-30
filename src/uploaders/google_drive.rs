@@ -12,8 +12,14 @@ use yup_oauth2::{
     read_service_account_key, 
     ServiceAccountAuthenticator
 };
+use serde_json::{
+    Value,
+    json
+};
 use google_drive_client::{
-    GoogleDriveClient,
+    GoogleDriveClient, 
+    GoogleDriveFolder, 
+    GoogleDriveUploadResult, 
     GoogleDriveUploadTask
 };
 use crate::{
@@ -27,9 +33,79 @@ use crate::{
 use super::{
     upload_result::{
         UploadResult,
-        UploadResultData
+        UploadResultData,
+        UploadResultMessage
     }
 };
+
+//////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+struct GoogleDriveUploadMessage{
+    plain: String,
+    blocks: Vec<Value>
+}
+impl UploadResultMessage for GoogleDriveUploadMessage {
+    fn get_slack_blocks(&self) -> &[Value] {
+        self.blocks.as_slice()   
+    }
+    fn get_plain(&self) -> &str {
+        &self.plain
+    }
+}
+
+//////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+struct DriveUploadResult{
+    message: GoogleDriveUploadMessage
+}
+impl DriveUploadResult{
+    fn new(folder: GoogleDriveFolder, files: Vec<GoogleDriveUploadResult>) -> DriveUploadResult {
+        // Финальное сообщение
+        let files_message = files
+            .into_iter()
+            .fold("Files:".to_owned(), |prev, res|{
+                format!("{}\n- <{}|{}>", prev, res.web_view_link, res.file_name)
+            });
+
+        let message = GoogleDriveUploadMessage {
+            plain: format!("Google drive uploading finished:\n- {}", folder.get_info().web_view_link),
+            blocks: vec![
+                json!({
+                    "type": "section", 
+                    "text": {
+                        "type": "mrkdwn", 
+                        "text": format!("Google drive folder:\n- <{}|{}>", folder.get_info().web_view_link, folder.get_info().name)
+                    }
+                }),
+                json!({
+                    "type": "section", 
+                    "text": {
+                        "type": "mrkdwn", 
+                        "text": files_message
+                    }
+                }),
+            ]
+        };
+        DriveUploadResult{
+            message
+        }
+    }
+}
+impl UploadResultData for DriveUploadResult {
+    fn get_target(&self) -> &'static str {
+        "SSH"   
+    }
+    fn get_message(&self) -> Option<&dyn UploadResultMessage> {
+        Some(&self.message)
+    }
+    fn get_qr_data(&self) -> Option<&str> {
+        None
+    }
+}
+
+//////////////////////////////////////////////////////////////////
 
 pub async fn upload_in_google_drive(client: reqwest::Client, env_params: GoogleDriveEnvironment, app_params: GoogleDriveParams) -> UploadResult {
     info!("Start google drive uploading");
@@ -93,19 +169,5 @@ pub async fn upload_in_google_drive(client: reqwest::Client, env_params: GoogleD
         results.push(result);
     }
 
-    // Финальное сообщение
-    let message_begin = format!("Google drive folder:\n- <{}|{}>\nFiles:", 
-                                    folder.get_info().web_view_link,
-                                    folder.get_info().name);
-    let message = results
-        .into_iter()
-        .fold(message_begin, |prev, res|{
-            format!("{}\n- <{}|{}>", prev, res.web_view_link, res.file_name)
-        });
-
-    Ok(UploadResultData{
-        target: "Google drive",
-        message: Some(message),
-        install_url: None
-    })
+    Ok(Box::new(DriveUploadResult::new(folder, results)))
 }

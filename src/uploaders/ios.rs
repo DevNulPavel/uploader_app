@@ -22,6 +22,10 @@ use tokio::{
         Command
     }
 };
+use serde_json::{
+    Value,
+    json
+};
 use log::{
     debug,
     // error
@@ -35,7 +39,8 @@ use crate::{
     },
     uploaders::{
         UploadResult,
-        UploadResultData
+        UploadResultData,
+        UploadResultMessage
     }
 };
 
@@ -68,6 +73,60 @@ impl Display for IOSError {
     }
 }
 impl error::Error for IOSError {
+}
+
+//////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+struct IOSUploadMessage{
+    plain: String,
+    blocks: Vec<Value>
+}
+impl UploadResultMessage for IOSUploadMessage {
+    fn get_slack_blocks(&self) -> &[Value] {
+        self.blocks.as_slice()   
+    }
+    fn get_plain(&self) -> &str {
+        &self.plain
+    }
+}
+
+//////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+struct IOSUploadResult{
+    message: IOSUploadMessage
+}
+impl IOSUploadResult{
+    fn new(file_name: String) -> IOSUploadResult {
+        let text = format!("IOS uploading finished:\n- {}", file_name);
+        let message = IOSUploadMessage{
+            plain: text.clone(),
+            blocks: vec![
+                json!({
+                    "type": "section", 
+                    "text": {
+                        "type": "mrkdwn", 
+                        "text": text
+                    }
+                })
+            ]
+        };
+        IOSUploadResult{
+            message
+        }
+    }
+}
+impl UploadResultData for IOSUploadResult {
+    fn get_target(&self) -> &'static str {
+        "SSH"   
+    }
+    fn get_message(&self) -> Option<&dyn UploadResultMessage> {
+        Some(&self.message)
+    }
+    fn get_qr_data(&self) -> Option<&str> {
+        None
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -129,12 +188,5 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
 
     debug!("Uploading util output: {}", text);
 
-    // Финальное сообщение
-    let message = format!("IOS uploading finished:\n- {}", file_name);
-
-    Ok(UploadResultData{
-        target: "iOS",
-        message: Some(message),
-        install_url: None
-    })  
+    Ok(Box::new(IOSUploadResult::new(file_name.to_owned())))  
 }

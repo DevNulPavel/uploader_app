@@ -5,9 +5,6 @@ use std::{
     path::{
         PathBuf
     },
-    borrow::{
-        Cow
-    },
     pin::{
         Pin
     }
@@ -39,6 +36,10 @@ use futures::{
 };
 use async_trait::{
     async_trait
+};
+use serde_json::{
+    json,
+    Value
 };
 use slack_client_lib::{
     SlackClient,
@@ -108,15 +109,21 @@ fn qr_future_for_result(install_url: Option<String>) -> Pin<Box<QRFuture>>
 macro_rules! message_target_impl {
     ($fn_name:ident, $target_type:ident$(<$life:lifetime>)?) => {
         async fn $fn_name <'a, Q: Future<Output=Option<QRInfo>>>(sender: &SenderResolved, 
-                                                              qr_data_future: Q, 
-                                                              target: $target_type$(<$life>)?, 
-                                                              text: &str) {
+                                                                 qr_data_future: Q, 
+                                                                 target: $target_type$(<$life>)?, 
+                                                                 prefix: &str,
+                                                                 blocks: &[Value]) {
         
             let (message_result, qr) = join!(
                 async{
+                    let full_json = json!({
+                        "text": prefix,
+                        "unfurl_links": false,
+                        "blocks": blocks
+                    });
                     sender
                         .client
-                        .send_message(text, target)
+                        .send_message_custom(full_json, target)
                         .await
                         .ok()
                         .flatten()
@@ -286,16 +293,33 @@ impl ResultReceiver for SlackResultSender {
         let sender = self.resolve_sender().await;
 
         // Собираем текст в кучу
-        let text = {
-            let mut strings = Vec::new();
+        let prefix = sender.text_prefix.as_deref().unwrap_or("Complete");
+        let blocks = {
+            let mut blocks = Vec::new();
             if let Some(prefix) = &sender.text_prefix {
-                strings.push(Cow::from(prefix));
+                blocks.push(json!({
+                    "type": "section", 
+                    "text": {
+                        "type": "mrkdwn", 
+                        "text": format!("*{}*", prefix)
+                    }
+                }));
+                blocks.push(json!({
+                    "type": "divider"
+                }));
             }
             if let Some(message) = result.get_message() {
-                strings.push(Cow::from(message.get_markdown()));
+                let message_blocks = message.get_slack_blocks();
+                blocks.extend(message_blocks.iter().cloned());
+                
+                if sender.text_prefix.is_some() {
+                    blocks.push(json!({
+                        "type": "divider"
+                    }));
+                }
             }
-            if strings.len() > 0 {
-                Some(strings.join("\n"))
+            if blocks.len() > 0 {
+                Some(blocks)
             }else{
                 None
             }
@@ -305,7 +329,7 @@ impl ResultReceiver for SlackResultSender {
         let qr_data_future = qr_future_for_result(result.get_qr_data().map(|v| v.to_owned()));
 
         // Сообщение
-        if let Some(message) = &text {
+        if let Some(blocks) = &blocks {
             // Массив наших тасков
             let mut futures_vec = Vec::new();
 
@@ -316,7 +340,7 @@ impl ResultReceiver for SlackResultSender {
                 let qr_data_future = qr_data_future.clone();
                 let fut = async move {
                     let target = SlackChannelMessageTarget::new(&channel);
-                    message_to_channel_target(sender, qr_data_future, target, message)
+                    message_to_channel_target(sender, qr_data_future, target, prefix, blocks)
                         .await;
                 };
 
@@ -327,7 +351,7 @@ impl ResultReceiver for SlackResultSender {
             if let Some(user_id) = &sender.user_id {
                 let fut = async move {
                     let target = SlackUserMessageTarget::new(&user_id);
-                    message_to_user_target(sender, qr_data_future, target, message)
+                    message_to_user_target(sender, qr_data_future, target, prefix, blocks)
                         .await;
                 };
 

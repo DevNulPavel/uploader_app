@@ -16,6 +16,10 @@ use log::{
     //debug,
     error
 };
+use serde_json::{
+    Value,
+    json
+};
 use app_center_client::{
     AppCenterClient,
     AppCenterBuildGitInfo,
@@ -43,12 +47,12 @@ use super::{
 
 #[derive(Debug)]
 struct AppCenterUploadMessage{
-    markdown: String,
+    blocks: Vec<Value>,
     plain: String,
 }
 impl UploadResultMessage for AppCenterUploadMessage {
-    fn get_markdown(&self) -> &str {
-        &self.markdown
+    fn get_slack_blocks(&self) -> &[Value] {
+        self.blocks.as_slice()   
     }
     fn get_plain(&self) -> &str {
         &self.plain
@@ -64,19 +68,17 @@ struct AppCenterUploadResult {
 }
 impl AppCenterUploadResult{
     fn new(file_name: String, result_url: String) -> AppCenterUploadResult {
-        let markdown = format!(
-            "App Center uploading finished:\n- <{}|{}>", 
-            result_url,
-            file_name
-        );
-        let plain = format!(
-            "App Center uploading finished:\n- file: {}\n- url: {}", 
-            file_name, 
-            result_url
-        );
         let message = AppCenterUploadMessage{
-            markdown,
-            plain 
+            plain: format!("App Center uploading finished:\n- file: {}\n- url: {}", file_name, result_url),
+            blocks: vec![
+                json!({
+                    "type": "section", 
+                    "text": {
+                        "type": "mrkdwn", 
+                        "text": format!("App Center uploading finished:\n- <{}|{}>", result_url, file_name)
+                    }
+                })
+            ]
         };
         AppCenterUploadResult{
             message,
@@ -151,7 +153,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
         build_description: app_center_app_params.build_description,
         git_info,
         version_info: version,
-        upload_threads_count: 10
+        upload_threads_count: 5
     };
 
     let mut iteration_number = 0_u32;

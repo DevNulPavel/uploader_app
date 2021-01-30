@@ -16,6 +16,10 @@ use google_play_client::{
     GooglePlayClient,
     GooglePlayUploadTask
 };
+use serde_json::{
+    Value,
+    json
+};
 use crate::{
     app_parameters::{
         GooglePlayParams
@@ -27,9 +31,66 @@ use crate::{
 use super::{
     upload_result::{
         UploadResult,
-        UploadResultData
+        UploadResultData,
+        UploadResultMessage
     }
 };
+
+//////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+struct GooglePlayUploadMessage{
+    plain: String,
+    blocks: Vec<Value>
+}
+impl UploadResultMessage for GooglePlayUploadMessage {
+    fn get_slack_blocks(&self) -> &[Value] {
+        self.blocks.as_slice()   
+    }
+    fn get_plain(&self) -> &str {
+        &self.plain
+    }
+}
+
+//////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+struct GooglePlayUploadResult{
+    message: GooglePlayUploadMessage
+}
+impl GooglePlayUploadResult{
+    fn new(file_name: String) -> GooglePlayUploadResult {
+        let text = format!("Google play uploading finished:\n- {}", file_name);
+        let message = GooglePlayUploadMessage {
+            plain: text.clone(),
+            blocks: vec![
+                json!({
+                    "type": "section", 
+                    "text": {
+                        "type": "mrkdwn", 
+                        "text": text
+                    }
+                })
+            ]
+        };
+        GooglePlayUploadResult{
+            message
+        }
+    }
+}
+impl UploadResultData for GooglePlayUploadResult {
+    fn get_target(&self) -> &'static str {
+        "SSH"   
+    }
+    fn get_message(&self) -> Option<&dyn UploadResultMessage> {
+        Some(&self.message)
+    }
+    fn get_qr_data(&self) -> Option<&str> {
+        None
+    }
+}
+
+//////////////////////////////////////////////////////////////////
 
 pub async fn upload_in_google_play(client: reqwest::Client, 
                                    env_params: GooglePlayEnvironment, 
@@ -75,12 +136,5 @@ pub async fn upload_in_google_play(client: reqwest::Client,
         .to_str()
         .ok_or("Google play: Invalid file name")?;
 
-    // Финальное сообщение
-    let message = format!("Google play uploading finished:\n- {}", file_name);
-
-    Ok(UploadResultData{
-        target: "Google play",
-        message: Some(message),
-        install_url: None
-    })
+    Ok(Box::new(GooglePlayUploadResult::new(file_name.to_owned())))
 }

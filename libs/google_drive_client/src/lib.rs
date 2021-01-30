@@ -12,6 +12,12 @@ pub use self::{
         GoogleDriveUploadTask,
         GoogleDriveUploadResult
     },
+    folder::{
+        GoogleDriveFolder
+    },
+    file::{
+        GoogleDriveFile
+    },
     error::{
         GoogleDriveError
     }

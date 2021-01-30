@@ -65,9 +65,9 @@ struct AppCenterUploadResult {
 impl AppCenterUploadResult{
     fn new(file_name: String, result_url: String) -> AppCenterUploadResult {
         let markdown = format!(
-            "App Center uploading finished:\n- [{}]({})", 
-            file_name, 
-            result_url
+            "App Center uploading finished:\n- <{}|{}>", 
+            result_url,
+            file_name
         );
         let plain = format!(
             "App Center uploading finished:\n- file: {}\n- url: {}", 

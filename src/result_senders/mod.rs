@@ -1,11 +1,11 @@
-mod receiver_trait;
+mod sender_trait;
 mod slack_sender;
 mod terminal_sender;
 mod qr;
 
 pub use self::{
-    receiver_trait::{
-        ResultReceiver
+    sender_trait::{
+        ResultSender
     },
     slack_sender::{
         SlackResultSender

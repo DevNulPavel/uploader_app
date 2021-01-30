@@ -21,45 +21,10 @@ use crate::{
     },
     uploaders::{
         UploadResult,
-        UploadResultData,
-        UploadResultMessage
+        UploadResultData
     }
 };
 
-//////////////////////////////////////////////////////////////////
-
-#[derive(Debug)]
-struct AmazonUploadMessage{
-    text: String
-}
-impl UploadResultMessage for AmazonUploadMessage {
-    fn get_markdown(&self) -> &str {
-        &self.text
-    }
-    fn get_plain(&self) -> &str {
-        &self.text
-    }
-}
-
-//////////////////////////////////////////////////////////////////
-
-#[derive(Debug)]
-struct AmazonUploadResult{
-    message: AmazonUploadMessage
-}
-impl UploadResultData for AmazonUploadResult {
-    fn get_target(&self) -> &'static str {
-        "Amazon"   
-    }
-    fn get_message(&self) -> Option<&dyn UploadResultMessage> {
-        Some(&self.message)
-    }
-    fn get_qr_data(&self) -> Option<&str> {
-        None
-    }
-}
-
-//////////////////////////////////////////////////////////////////
 
 pub async fn upload_in_amazon(http_client: reqwest::Client, 
                               env_params: AmazonEnvironment, 
@@ -94,11 +59,11 @@ pub async fn upload_in_amazon(http_client: reqwest::Client,
         .ok_or("Amazon: Invalid file name")?;
 
     // Финальное сообщение
-    let res = AmazonUploadResult{
-        message: AmazonUploadMessage{
-            text: format!("Amazon uploading finished:\n- {}", file_name)
-        }
-    };
+    let message = format!("Amazon uploading finished:\n- {}", file_name);
 
-    Ok(Box::new(res))
+    Ok(UploadResultData{
+        target: "Amazon",
+        message: Some(message),
+        install_url: None
+    })  
 }

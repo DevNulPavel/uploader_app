@@ -60,20 +60,13 @@ use crate::{
     }
 };
 use super::{
-    ResultReceiver, 
+    ResultSender, 
     qr::{
         create_qr_data
     }
 };
 
-// Можно использовать заранее установленый тип вместо шаблона ниже
-type QRFuture = dyn Future<Output = Option<QRInfo>> + Send + 'static;
-
-// where 
-//    F: Future<Output = Option<QRInfo>> + Send + ?Sized + 'static 
-
-fn qr_future_for_result(install_url: Option<String>) -> Pin<Box<QRFuture>> 
-{
+fn qr_future_for_result(install_url: Option<String>) -> Pin<Box<dyn Future<Output=Option<QRInfo>> + Send>>{
     let qr_data_future = match install_url{
         Some(url) => {
             let fut = async move {
@@ -186,8 +179,6 @@ pub struct SlackResultSender{
 }
 impl SlackResultSender {
     pub fn new(http_client: Client, params: ResultSlackEnvironment) -> SlackResultSender{
-        // Запускаем в фоне задачу по получению информации по отправке в слак
-        // При первом обращении - дожадаемся результата, либо сразу выдаем результат, если он уже есть
         let join = spawn(async move{
             let client = SlackClient::new(http_client, params.token.clone()); // TODO: Убрать клонирование
             let client_ref = &client;
@@ -281,8 +272,8 @@ impl SlackResultSender {
     }
 }
 #[async_trait(?Send)]
-impl ResultReceiver for SlackResultSender {
-    async fn on_result_received(&mut self, result: &dyn UploadResultData){
+impl ResultSender for SlackResultSender {
+    async fn send_result(&mut self, result: &UploadResultData){
         let sender = self.resolve_sender().await;
 
         // Собираем текст в кучу
@@ -291,8 +282,9 @@ impl ResultReceiver for SlackResultSender {
             if let Some(prefix) = &sender.text_prefix {
                 strings.push(Cow::from(prefix));
             }
-            if let Some(message) = result.get_message() {
-                strings.push(Cow::from(message.get_markdown()));
+            if let Some(message) = &result.message {
+                let text = format!("```{}```", message);
+                strings.push(Cow::from(text));
             }
             if strings.len() > 0 {
                 Some(strings.join("\n"))
@@ -301,8 +293,8 @@ impl ResultReceiver for SlackResultSender {
             }
         };
 
-        // Создаем футуру с результатом QR, где результатом будет либо Some<QR>, либо None
-        let qr_data_future = qr_future_for_result(result.get_qr_data().map(|v| v.to_owned()));
+        // Создаем футуру с результатом QR
+        let qr_data_future = qr_future_for_result(result.install_url.clone());
 
         // Сообщение
         if let Some(message) = &text {
@@ -360,9 +352,10 @@ impl ResultReceiver for SlackResultSender {
                 join_all(futures_vec).await;
             }
         }
+
     }
 
-    async fn on_error_received(&mut self, err: &dyn Error){
+    async fn send_error(&mut self, err: &dyn Error){
         let sender = self.resolve_sender().await;
 
         let message = format!("Uploading error:```{}```", err);

@@ -1,4 +1,3 @@
-mod cow_arc;
 mod request_builder;
 mod responses;
 mod helpers;

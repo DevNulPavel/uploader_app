@@ -373,6 +373,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea221b5284a47e40033bf9b66f35f984ec0ea2931eb03505246cd27a963f981b"
 
 [[package]]
+name = "cow_arc"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a03045295b9a1732229cc9bb666f6b8b154c453e59c905f527f1e550b9c0aab"
+
+[[package]]
 name = "crc32fast"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -802,6 +808,7 @@ dependencies = [
 name = "google_play_client"
 version = "1.0.0"
 dependencies = [
+ "cow_arc",
  "dirs",
  "env_logger 0.8.2",
  "futures",

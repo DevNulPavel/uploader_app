@@ -20,12 +20,12 @@ use reqwest::{
 use yup_oauth2::{
     AccessToken
 };
+use cow_arc::{
+    CowArc
+};
 use super::{
     error::{
         GooglePlayError
-    },
-    cow_arc::{
-        CowArc
     }
 };
 

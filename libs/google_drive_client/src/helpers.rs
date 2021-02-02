@@ -29,7 +29,7 @@ pub async fn get_files_list_with_query(request_builder: &GoogleDriveRequestBuild
             ("supportsAllDrives", "true"),
             ("includeTeamDriveItems", "true"),
             ("supportsTeamDrives", "true"),
-            ("fields", "nextPageToken,files(id,mimeType,name,webContentLink,webViewLink)"),
+            ("fields", "nextPageToken,files(id,mimeType,name,webContentLink,webViewLink,parents)"),
             ("pageToken", &page_token),
             ("q", query)
         ])

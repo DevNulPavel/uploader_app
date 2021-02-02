@@ -15,7 +15,7 @@ eval "$(gpg -a -r 0x0BD10E4E6E578FB6 -d test_environment.env.asc)"
 # Rust environment setup
 export RUST_BACKTRACE=1
 # export RUST_LOG=uploader_app=trace
-export RUST_LOG=uploader_app=trace,app_center_client=trace,reqwest=trace
+export RUST_LOG=uploader_app=trace,app_center_client=trace,google_drive_client=trace,reqwest=trace
 
 # App center
 # UPLOAD_PARAMS=()
@@ -29,7 +29,7 @@ export RUST_LOG=uploader_app=trace,app_center_client=trace,reqwest=trace
 # Google drive
 # --google_drive_target_domain ""
 target/debug/uploader_app \
-    --google_drive_files "/Users/devnul/Downloads/magic_mac.zip","/Users/devnul/Downloads/KeePassX-2.0.3.dmg" \
+    --google_drive_files "/Users/devnul/Downloads/Mimestream_0.9.2.dmg" \
     --google_drive_target_folder_id "1YtSfyiMp-MxF5AVWq_VnJxGtAwiMghBF" \
-    --google_drive_target_subfolder_name "New folder" \
+    --google_drive_target_subfolder_name "NewFolderTest" \
     --google_drive_target_owner_email "devnulpavel@gmail.com"

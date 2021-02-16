@@ -110,6 +110,7 @@ impl AppCenterClient {
         let releases_resp = req
             .send()
             .await?
+            .error_for_status()?
             .json::<ReleasesResponse>()
             .await?;
         
@@ -128,6 +129,7 @@ impl AppCenterClient {
             }))
             .send()
             .await?
+            .error_for_status()?
             .json()
             .await?;
 
@@ -145,7 +147,8 @@ impl AppCenterClient {
             let update_status_resp = self.request_builder
                 .build_request(APPLICATION, Method::GET, &path, true)?
                 .send()
-                .await?              
+                .await?
+                .error_for_status()?         
                 .json::<UploadingFinishedGetStatusResponse>()
                 .await?;
 
@@ -215,6 +218,7 @@ impl AppCenterClient {
             ))
             .send()
             .await?
+            .error_for_status()?
             .text()
             .await?;
 
@@ -251,6 +255,7 @@ impl AppCenterClient {
             let result = request
                 .send()
                 .await?
+                .error_for_status()?
                 /*.text()
                 .await?*/
                 .json::<ReleaseUpdateResponse>()
@@ -278,6 +283,7 @@ impl AppCenterClient {
             .build_request(APPLICATION, Method::GET, &path, true)?
             .send()
             .await?
+            .error_for_status()?
             .json::<ReleaseInfoResponse>()
             .await?;
         

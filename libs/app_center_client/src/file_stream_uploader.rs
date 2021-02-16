@@ -91,6 +91,7 @@ where
         .body(body)
         .send()
         .await?
+        .error_for_status()?
         .json::<Response>()
         .await?;
 
@@ -264,6 +265,7 @@ impl<'a> AppCenterUploader<'a> {
             .query(&[("token", &self.release_info.token) ])
             .send()
             .await?
+            .error_for_status()?
             .json::<UploadingFinishedResponse>()
             .await?;
 

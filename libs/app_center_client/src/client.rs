@@ -178,7 +178,7 @@ impl AppCenterClient {
             Some(ref desc) =>{
                 match task.git_info {
                     Some(ref git) => {
-                        format!("Branch: {}\n\nCommit: {}\n\n\n\n{}", git.branch, git.commit, desc)
+                        format!("• Branch: {}\n\n• Commit: {}\n\n\n\n{}", git.branch, git.commit, desc)
                     },
                     None => {
                         format!("{}", desc)

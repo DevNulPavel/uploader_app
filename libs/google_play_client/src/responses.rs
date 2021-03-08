@@ -6,13 +6,12 @@
 use serde::{
     Deserialize
 };
-use into_result::{
-    IntoResult
-};
+// use into_result::{
+//     IntoResult
+// };
 // use serde_json::{
 //     Value
 // };
-
 
 #[derive(Deserialize, Debug)]
 pub struct ErrorResponseValue{
@@ -29,12 +28,29 @@ pub struct ErrorResponse{
 
 //////////////////////////////////////////////////////////////////////
 
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum DataOrErrorResponse<D>{
+    Ok(D),
+    Err(ErrorResponse)
+}
+impl<D> DataOrErrorResponse<D> {
+    pub fn into_result(self) -> Result<D, ErrorResponse> {
+        match self {
+            DataOrErrorResponse::Ok(ok) => Ok(ok),
+            DataOrErrorResponse::Err(err) => Err(err),
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+
 // https://developers.google.com/play/api/v3/reference/files#resource
 #[derive(Deserialize, Debug)]
 pub struct AppEditResponseOk{
     pub id: String
 }
-#[derive(Deserialize, Debug)]
+/*#[derive(Deserialize, Debug)]
 #[serde(untagged)]
 pub enum AppEditResponse{
     Ok(AppEditResponseOk),
@@ -47,7 +63,7 @@ impl IntoResult<AppEditResponseOk, ErrorResponse> for AppEditResponse {
             AppEditResponse::Err(err) => Err(err),
         }
     }
-}
+}*/
 
 //////////////////////////////////////////////////////////////////////
 
@@ -58,7 +74,7 @@ pub struct UploadResponseOk{
     #[serde(rename = "versionCode")]
     pub version_code: u64
 }
-#[derive(Deserialize, Debug)]
+/*#[derive(Deserialize, Debug)]
 #[serde(untagged)]
 pub enum UploadResponse{
     Ok(UploadResponseOk),
@@ -71,7 +87,7 @@ impl IntoResult<UploadResponseOk, ErrorResponse> for UploadResponse {
             UploadResponse::Err(err) => Err(err),
         }
     }
-}
+}*/
 
 //////////////////////////////////////////////////////////////////////
 

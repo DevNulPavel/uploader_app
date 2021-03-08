@@ -27,12 +27,10 @@ use tokio_util::{
         FramedRead
     }
 };
-use into_result::{
-    IntoResult
-};
 use super::{
     responses::{
-        AppEditResponse
+        AppEditResponseOk,
+        DataOrErrorResponse
     },
     request_builder::{
         GooglePlayRequestBuilder
@@ -61,7 +59,7 @@ impl AppEdit {
             .build()?
             .send()
             .await?
-            .json::<AppEditResponse>()
+            .json::<DataOrErrorResponse<AppEditResponseOk>>()
             .await?
             .into_result()?;
 
@@ -136,7 +134,7 @@ impl AppEdit {
             .multipart(multipart)
             .send()
             .await?
-            .json::<UploadResponse>()
+            .json::<DataOrErrorResponse<UploadResponseOk>>()
             .await?
             .into_result()?;
             
@@ -188,7 +186,7 @@ impl AppEdit {
             .build()?
             .send()
             .await?
-            .json::<AppEditResponse>()
+            .json::<DataOrErrorResponse<AppEditResponseOk>>()
             .await?
             .into_result()?;
 
@@ -204,7 +202,7 @@ impl AppEdit {
             .build()?
             .send()
             .await?
-            .json::<AppEditResponse>()
+            .json::<DataOrErrorResponse<AppEditResponseOk>>()
             .await?
             .into_result()?;
 

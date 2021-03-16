@@ -28,6 +28,7 @@ app_center_client = {path="libs/app_center_client", features=["rustls"]}
 google_drive_client = {path="libs/google_drive_client", features=["rustls"]}
 google_play_client = {path="libs/google_play_client", features=["rustls"]}
 amazon_client = {path="libs/amazon_client", features=["rustls"]}
+microsoft_azure_client = {path="libs/microsoft_azure_client", features=["rustls"]}
 any_field_is_some = {path="libs/any_field_is_some"}
 flame = {version="0.2.2", optional=true}
 flamer = {version="0.4.0", optional=true}

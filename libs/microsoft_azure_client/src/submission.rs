@@ -21,11 +21,15 @@ use tokio_util::{
     }
 };
 use reqwest::{
-    Body
+    Body,
+    // multipart::{
+        // Form,
+        // Part
+    // }
 };
-use serde_json::{
-    json
-};
+// use serde_json::{
+//     json
+// };
 use crate::{
     request_builder::{
         RequestBuilder
@@ -83,7 +87,7 @@ impl Submission {
     /// параметры передаются просто в виде Json словаря, так как список параметров огромный
     /// После успешного выполнения запроса, обновляем внутренние данные сабмишена
     /// Информация по параметрам: `https://docs.microsoft.com/en-us/windows/uwp/monetize/update-an-app-submission`
-    async fn update_application_submission_info(&mut self) -> Result<(), MicrosoftAzureError> {
+    async fn update_server_application_submission_info(&mut self) -> Result<(), MicrosoftAzureError> {
         debug!("Microsoft Azure: new submission update");
 
         let new_info = self.request_builder
@@ -105,11 +109,6 @@ impl Submission {
         self.data = new_info;
         
         Ok(())
-
-        //     .text()
-        //     .await?;
-        // debug!("RESPONE: {}", new_info);
-        // Err(MicrosoftAzureError::InvalidUploadFileExtention)
     }
 
     pub async fn upload_build_file(&mut self, appxupload_file_path: &Path) -> Result<(), MicrosoftAzureError>{
@@ -138,50 +137,55 @@ impl Submission {
         }
 
         // Передаем имя файлика в информацию о сабмишене
-        {
-            // Получаем имя файлика внутри нашего .appxupload архива
-            let internal_appx_file_name = {
-                // Получаем имя файлика без расширения appxupload
-                let file_stem = appxupload_file_path
-                    .file_stem()
-                    .and_then(|file_stem|{
-                        file_stem.to_str()
-                    })
-                    .ok_or(MicrosoftAzureError::InvalidUploadFileExtention)?;
-                
-                format!("{}.appx", file_stem)
-            };
 
-            debug!("New file name: {}", internal_appx_file_name);
+        // Получаем имя файлика внутри нашего .appxupload архива
+        /*let internal_appx_file_name = {
+            // Получаем имя файлика без расширения appxupload
+            let file_stem = appxupload_file_path
+                .file_stem()
+                .and_then(|file_stem|{
+                    file_stem.to_str()
+                })
+                .ok_or(MicrosoftAzureError::InvalidUploadFileExtention)?;
+            
+            format!("{}.appx", file_stem)
+        };*/
+        let file_name = appxupload_file_path
+            .file_name()
+            .and_then(|name|{
+                name.to_str()
+            })
+            .ok_or(MicrosoftAzureError::InvalidUploadFileExtention)?;
 
-            // Данные
-            // https://docs.microsoft.com/en-us/windows/uwp/monetize/update-an-app-submission
-            /*let json_data = json!(
-                {
-                    "applicationPackages": [
-                        {
-                            "fileName": internal_appx_file_name,
-                            "fileStatus": "PendingUpload"
-                        }
-                    ]
-                }
-            );*/
-            self.data.app_packages.push(SubmissionCreateAppPackageInfo{
-                file_name: internal_appx_file_name,
-                file_status: "PendingUpload".to_owned()
-            });
+        debug!("New file name: {}", file_name);
 
-            // Обновление данных у сабмишена
-            self
-                .update_application_submission_info()
-                .await?;
-        }
+        // Модифицируем текущие полученные данные, добавляя туда имя файлика
+        // https://docs.microsoft.com/en-us/windows/uwp/monetize/update-an-app-submission
+        self.data.app_packages.push(SubmissionCreateAppPackageInfo{
+            file_name: file_name.to_owned(),
+            file_status: "PendingUpload".to_owned(),
+            minimum_direct_x: "None".to_owned(),
+            minimum_ram: "None".to_owned(),
+            other_fields: Default::default()
+        });
+
+        // Обновление данных у сабмишена
+        self
+            .update_server_application_submission_info()
+            .await?;
 
         // Подготавливаем файлик для потоковой выгрузки
         let file = File::open(appxupload_file_path).await.context("Upload file open error")?;
         let file_length = file.metadata().await.context("Upload file metadate receive error")?.len();
         let reader = FramedRead::new(file, BytesCodec::new());
         let body = Body::wrap_stream(reader);
+
+        // let multipart = Form::new()
+            // .part("meta", Part::text("{}")
+            //         .mime_str("application/json; charset=UTF-8")
+            //         .expect("Meta set failed"))
+            // .part("body", Part::stream_with_length(body, file_length)
+            //         .file_name(file_name.to_owned()));
 
         // Получаем чистый HTTP клиент для выгрузки файлика
         let http_client = self.request_builder.get_http_client();

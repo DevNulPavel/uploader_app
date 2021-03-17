@@ -39,6 +39,10 @@ fn deserealize_from_str<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 /// Тип ошибки, в который мы можем парсить наши данные
 #[derive(Deserialize, Debug)]
 pub struct ErrorResponseValue{
+    source: String,
+    message: String,
+    code: String,
+    target: String,
     // error: String,
     // error_description: String,
     // error_codes: Vec<u32>,
@@ -130,57 +134,62 @@ pub struct ApplicationInfoResponse{
 
 //////////////////////////////////////////////////////////////////////
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubmissionCreateStatusDetailInfo {
     code: String,
-    details: String
+    details: String,
+
+    #[serde(flatten)]
+    pub other_fields: HashMap<String, Value>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubmissionCreateSertificationReport {
     date: String,
 
     #[serde(rename = "reportUrl")]
-    report_url: String
+    report_url: String,
+
+    #[serde(flatten)]
+    pub other_fields: HashMap<String, Value>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubmissionCreateStatusDetails {
     errors: Vec<SubmissionCreateStatusDetailInfo>,
 
     warnings: Vec<SubmissionCreateStatusDetailInfo>,
 
     #[serde(rename = "certificationReports")]
-    certification_reports: Vec<SubmissionCreateSertificationReport>
+    certification_reports: Vec<SubmissionCreateSertificationReport>,
+
+    #[serde(flatten)]
+    pub other_fields: HashMap<String, Value>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubmissionCreateAppPackageInfo {
     #[serde(rename = "fileName")]
     pub file_name: String,
 
     #[serde(rename = "fileStatus")]
-    pub file_status: String
-    // minimumDirectXVersion: "None",
-    // minimumSystemRam: "None"
+    pub file_status: String,
+
+    #[serde(rename = "minimumDirectXVersion")]
+    pub minimum_direct_x: String,
+
+    #[serde(rename = "minimumSystemRam")]
+    pub minimum_ram: String,
+
+    #[serde(flatten)]
+    pub other_fields: HashMap<String, Value>,
 }
 
 /// Данная структура представляет собой ответ после инициализации
 /// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#app-submission-object`
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubmissionCreateResponse {
     pub id: String,
-
-    #[serde(rename = "applicationCategory")]
-    pub app_category: String,
-
-    pub visibility: String,
-
-    #[serde(rename = "targetPublishMode")]
-    pub target_publish_mode: String,
-
-    #[serde(rename = "targetPublishDate")]
-    pub target_publish_date: String,
 
     pub status: String, // TODO: ENUM
 
@@ -189,9 +198,6 @@ pub struct SubmissionCreateResponse {
 
     #[serde(rename = "fileUploadUrl")]
     pub file_upload_url: String,
-
-    #[serde(rename = "friendlyName")]
-    pub friendly_name: String,
 
     #[serde(rename = "applicationPackages")]
     pub app_packages: Vec<SubmissionCreateAppPackageInfo>,

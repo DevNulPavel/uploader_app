@@ -1,4 +1,4 @@
-/*use std::{
+use std::{
     sync::{
         Arc
     },
@@ -6,14 +6,13 @@
         Deref,
         // DerefMut
     }
-};*/
+};
 // use log::{
     // debug,
     // info
 // };
-/*use reqwest::{
+use reqwest::{
     Client,
-    RequestBuilder,
     Url,
     Method
 };
@@ -22,99 +21,98 @@ use cow_arc::{
 };
 use super::{
     token::{
-        MicrosoftAzureTokenProvider
+        TokenProvider
     },
     error::{
         MicrosoftAzureError
     }
-};*/
+};
 
-/*
+
 /// Внутренняя структура билдера запросов с неизменяемыми данными
 #[derive(Debug)]
 struct Base { 
     http_client: Client, // Arc inside
     base_url: Url,
-    token: Arc<MicrosoftAzureToken>
+    application_id: String,
+    token_provider: Box<dyn TokenProvider>
 }
 
 /// Непосредственно реквест билдер, который может быть легко склонирован с тем состоянием,
 /// которое он имеет сейчас на момент работы
 #[derive(Debug, Clone)]
-pub struct MicrosoftAzureRequestBuilder {
+pub struct RequestBuilder {
     base: Arc<Base>,
-    // upload: bool,
-    // edit_id: CowArc<Option<String>>,
-    // edit_command: CowArc<Option<String>>,
-    // method: Method,
-    // path_segments: CowArc<Vec<String>>
+    submission_id: CowArc<Option<String>>,
+    submission_command: CowArc<Option<String>>,
+    path_segments: CowArc<Vec<String>>,
+    method: Method,
 }
-impl<'a> MicrosoftAzureRequestBuilder {
+impl<'a> RequestBuilder {
     pub fn new(http_client: Client,
-               base_url: Url,
-               package_name: String,
-               token: Arc<MicrosoftAzureToken>) -> MicrosoftAzureRequestBuilder {
-        MicrosoftAzureRequestBuilder{
+               token_provider: Box<dyn TokenProvider>,
+               application_id: String) -> RequestBuilder {
+
+        let base_api_url = Url::parse("https://manage.devcenter.microsoft.com/")
+            .expect("Microsoft Azure base api URL parse failed");
+        
+        RequestBuilder{
             base: Arc::new(Base{
                 http_client,
-                token,
-                base_url,
+                base_url: base_api_url,
+                token_provider,
+                application_id
             }),
+            method: Default::default(),
+            submission_id: Default::default(),
+            submission_command: Default::default(),
+            path_segments: Default::default()
             // upload: false,
             // edit_id: CowArc::new(None),
             // edit_command: CowArc::new(None),
-            // method: Method::default(),
-            // path_segments: CowArc::new(Vec::new())
         }
     }
 
-    pub fn method(mut self, method: Method) -> MicrosoftAzureRequestBuilder {
+    pub fn method(mut self, method: Method) -> RequestBuilder {
         self.method = method;
         self
     }
 
-    pub fn upload(mut self) -> MicrosoftAzureRequestBuilder {
-        self.upload = true;
+    pub fn submission_id(mut self, sub_id: String) -> RequestBuilder {
+        self.submission_id.set_val(Some(sub_id));
         self
     }
 
-    pub fn edit_id<T: ToString>(mut self, edit_id: T) -> MicrosoftAzureRequestBuilder {
-        self.edit_id.set_val(Some(edit_id.to_string()));
+    pub fn submission_command(mut self, sub_id: String) -> RequestBuilder {
+        self.submission_command.set_val(Some(sub_id));
         self
     }
 
-    pub fn edit_command<T: ToString>(mut self, edit_command: T) -> MicrosoftAzureRequestBuilder {
-        self.edit_command.set_val(Some(edit_command.to_string()));
-        self
-    }
-
-    pub fn join_path<T: ToString>(mut self, segment: T) -> MicrosoftAzureRequestBuilder {
+    pub fn join_path(mut self, segment: String) -> RequestBuilder {
         self.path_segments.update_val(|val|{
-            val.push(segment.to_string());
+            val.push(segment);
         });
         self
     }
 
-    pub fn build(self) -> Result<RequestBuilder, GooglePlayError>{
+    pub async fn build(self) -> Result<reqwest::RequestBuilder, MicrosoftAzureError>{
         let mut url = self.base.base_url.clone();
         {
             let mut segments = url.path_segments_mut()
                 .map_err(|_|{
-                    GooglePlayError::EmptyUrlSegments
+                    MicrosoftAzureError::UnvalidUrlSegments
                 })?;
-            if self.upload {
-                segments.push("upload");
-            }
-            segments.push("androidpublisher");
-            segments.push("v3");
+            // Базовая часть
+            segments.push("v1.0");
+            segments.push("my");
             segments.push("applications");
-            segments.push(&self.base.package_name);
-            if let Some(edit_id) = self.edit_id.as_ref() {
-                segments.push("edits");
-                if let Some(edit_command) = self.edit_command.as_ref() {
-                    segments.push(&format!("{}:{}", edit_id, edit_command));
-                }else{
-                    segments.push(edit_id);
+            segments.push(&self.base.application_id);
+            // Если есть submission id, добавляем
+            if let Some(submission_id) = self.submission_id.as_ref() {
+                segments.push("submissions");
+                segments.push(&submission_id);
+                if let Some(submission_command) = self.submission_command.as_ref() {
+                    segments.push(submission_command);
                 }
             }
             for segment in self.path_segments.deref() {
@@ -126,14 +124,13 @@ impl<'a> MicrosoftAzureRequestBuilder {
             }
         }
 
-        if self.base.token.is_expired(){
-            return Err(GooglePlayError::TokenIsExpired);
-        }
+        // Получаем токен с перезапросомм если надо
+        let token = self.base.token_provider
+            .get_access_token()
+            .await?;
 
-        let token = self.base.token.as_str();
-        let builder = self
-            .base
-            .http_client
+        // Создаем запрос
+        let builder = self.base.http_client
             .request(self.method, url.as_str())
             .bearer_auth(token);
 
@@ -143,50 +140,75 @@ impl<'a> MicrosoftAzureRequestBuilder {
 
 #[cfg(test)]
 mod tests{
+    use async_trait::{
+        async_trait
+    };
+    use crate::{
+        token::{
+            TokenProvider
+        }
+    };
     use super::*;
 
-    #[test]
-    fn test_request_builder(){
-        let token = serde_json::from_str::<AccessToken>(r#"{ "value": "asdasdsfds" }"#).expect("Token parse failed");
+    //////////////////////////////////////////////////////////////////////////////////////////
 
-        let base_url = reqwest::Url::parse("https://androidpublisher.googleapis.com")
-            .expect("Parse url failed");
-
-        let builder = MicrosoftAzureRequestBuilder::new(
-            Client::new(), 
-            base_url, 
-            "com.test.org".into(), 
-            token.into()
-        );
-
-        let base_builder = builder
-            .method(Method::POST)
-            .upload()
-            .edit_id("asdasd");
-
-        let req = base_builder
-            .clone()
-            .join_path("test/custom/path")
-            .build()
-            .expect("Builder error")
-            .build()
-            .expect("Builder error");
-
-        assert_eq!(
-            req.url().as_str(), 
-            "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/com.test.org/edits/asdasd/test/custom/path"
-        );
-        
-        let req = base_builder
-            .edit_command("commit")
-            .build()
-            .expect("Builder error")
-            .build()
-            .expect("Builder error");
-
-        assert_eq!(
-            req.url().as_str(), 
-            "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/com.test.org/edits/asdasd:commit"
-        );
+    /// Специальный провайдер токенов для тестовых целей
+    #[derive(Debug)]
+    struct FakeTokenProvider{
+        fake_value: Arc<String>
     }
-}*/
+    #[async_trait(?Send)]
+    impl TokenProvider for FakeTokenProvider {
+        async fn get_access_token(&self) -> Result<Arc<String>, MicrosoftAzureError> {
+            Ok(self.fake_value.clone())
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////
+
+    #[tokio::test]
+    async fn test_request_builder(){
+        let token_provider = Box::new(FakeTokenProvider{
+            fake_value: Arc::new(String::from("fake_token_value"))
+        });
+
+        let builder = RequestBuilder::new(Client::new(), 
+                                                        token_provider, 
+                                                        "test_application_id".to_string());
+
+        {
+            let req = builder
+                .clone()
+                .build()
+                .await
+                .expect("Builder error")
+                .build()
+                .expect("Builder error");
+            assert_eq!(req.url().as_str(), 
+                    "https://manage.devcenter.microsoft.com/v1.0/my/applications/test_application_id");
+        }
+
+        {
+            let req = builder
+                .clone()
+                .submission_id("test_submission_id".to_owned())
+                .submission_command("test_command".to_owned())
+                .build()
+                .await
+                .expect("Builder error")
+                .build()
+                .expect("Builder error");
+            assert_eq!(req.url().as_str(), 
+                    "https://manage.devcenter.microsoft.com/v1.0/my/applications/test_application_id/submissions/test_submission_id/test_command");
+        }
+
+        {
+            builder
+                .clone()
+                .submission_id("test_submission_id".to_owned())
+                .build()
+                .await
+                .expect_err("Missing `submission command` with existing `submission_id` must throw an error");
+        }        
+    }
+}

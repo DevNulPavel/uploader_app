@@ -1,12 +1,21 @@
 use std::{
     sync::{
         Once
+    },
+    env::{
+        self
     }
 };
-// use log::{
-//     // debug,
-//     // info
-// };
+use log::{
+    debug,
+    // info
+};
+use reqwest::{
+    Client
+};
+use microsoft_azure_client::{
+    MicrosoftAzureClient
+};
 
 fn setup_logs() {
     static ONCE: Once = Once::new();
@@ -27,4 +36,25 @@ fn setup_logs() {
 #[tokio::test]
 async fn library_integration_test(){
     setup_logs();
+
+    let tenant_id = env::var("MICROSOFT_AZURE_TENANT_ID").expect("Missing env variable");
+    let client_id = env::var("MICROSOFT_AZURE_CLIENT_ID").expect("Missing env variable");
+    let client_secret = env::var("MICROSOFT_AZURE_SECRET_KEY").expect("Missing env variable");
+    let application_id = env::var("MICROSOFT_AZURE_STORE_ID").expect("Missing env variable");
+
+    // Создаем HTTP клиента, можно спокойно клонировать, внутри Arc
+    let http_client = Client::new();
+
+    // Создаем клиента
+    let client = MicrosoftAzureClient::new(http_client, 
+                                           tenant_id, 
+                                           client_id, 
+                                           client_secret, 
+                                           application_id);
+
+    // Делавем попытку выгрузки
+    client
+        .upload_production_build()
+        .await
+        .expect("Upload failed");
 }

@@ -30,5 +30,13 @@ quick_error!{
             from()                                  // Конвертируем из типа ErrorResponseValue
             //from(err: ErrorResponse) -> (err.error) // Конвертируем из типа ErrorResponse
         }
+
+        /// Ошибка парсинга урла на компоненты в RequestBuilder
+        UnvalidUrlSegments{
+        }
+
+        /// Ошибка построения урла через RequestBuilder
+        RequestBuilderFail(info: &'static str){
+        }
     }
 }

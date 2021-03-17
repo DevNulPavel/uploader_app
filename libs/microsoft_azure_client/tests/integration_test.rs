@@ -4,12 +4,15 @@ use std::{
     },
     env::{
         self
+    },
+    path::{
+        Path
     }
 };
-use log::{
-    debug,
+// use log::{
+    // debug,
     // info
-};
+// };
 use reqwest::{
     Client
 };
@@ -37,10 +40,14 @@ fn setup_logs() {
 async fn library_integration_test(){
     setup_logs();
 
+    // Переменные окружения
     let tenant_id = env::var("MICROSOFT_AZURE_TENANT_ID").expect("Missing env variable");
     let client_id = env::var("MICROSOFT_AZURE_CLIENT_ID").expect("Missing env variable");
     let client_secret = env::var("MICROSOFT_AZURE_SECRET_KEY").expect("Missing env variable");
     let application_id = env::var("MICROSOFT_AZURE_STORE_ID").expect("Missing env variable");
+
+    // Файлик выгрузки
+    let upload_file_path = Path::new("/Users/devnul/Downloads/MHouseXGen_4.100.0.0_Win32.appxupload");
 
     // Создаем HTTP клиента, можно спокойно клонировать, внутри Arc
     let http_client = Client::new();
@@ -54,7 +61,7 @@ async fn library_integration_test(){
 
     // Делавем попытку выгрузки
     client
-        .upload_production_build()
+        .upload_production_build(upload_file_path)
         .await
         .expect("Upload failed");
 }

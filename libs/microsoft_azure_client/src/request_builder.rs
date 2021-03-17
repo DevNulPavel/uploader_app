@@ -73,6 +73,11 @@ impl<'a> RequestBuilder {
         }
     }
 
+    /// Возвращает сырой клиент без модификаций
+    pub fn get_http_client(&self) -> Client {
+        self.base.http_client.clone()
+    }
+
     pub fn method(mut self, method: Method) -> RequestBuilder {
         self.method = method;
         self

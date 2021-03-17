@@ -38,5 +38,18 @@ quick_error!{
         /// Ошибка построения урла через RequestBuilder
         RequestBuilderFail(info: &'static str){
         }
+
+        /// Ошибка, что расширение файлика для выгрузки неправильное
+        InvalidUploadFileExtention{
+        }
+
+        /// Системная IO ошибка
+        IOError(context: &'static str, err: std::io::Error){
+            context(context: &'static str, err: std::io::Error) -> (context, err)
+        }
+
+        /// Нету файлика по этому пути
+        NoFile(path: std::path::PathBuf){
+        }
     }
 }

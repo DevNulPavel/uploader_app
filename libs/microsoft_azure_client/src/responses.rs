@@ -11,6 +11,7 @@ use std::{
 };
 use serde::{
     Deserialize,
+    Serialize,
     de::{
         self, 
         Deserializer
@@ -38,12 +39,12 @@ fn deserealize_from_str<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 /// Тип ошибки, в который мы можем парсить наши данные
 #[derive(Deserialize, Debug)]
 pub struct ErrorResponseValue{
-    error: String,
-    error_description: String,
-    error_codes: Vec<u32>,
-    timestamp: String, // TODO: Use DateTime "2016-04-11 18:59:01Z",
-    trace_id: String,
-    correlation_id: String,
+    // error: String,
+    // error_description: String,
+    // error_codes: Vec<u32>,
+    // timestamp: String, // TODO: Use DateTime "2016-04-11 18:59:01Z",
+    // trace_id: String,
+    // correlation_id: String,
 
     #[serde(flatten)]
     other: HashMap<String, Value>
@@ -129,13 +130,13 @@ pub struct ApplicationInfoResponse{
 
 //////////////////////////////////////////////////////////////////////
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct SubmissionCreateStatusDetailInfo {
     code: String,
     details: String
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct SubmissionCreateSertificationReport {
     date: String,
 
@@ -143,7 +144,7 @@ pub struct SubmissionCreateSertificationReport {
     report_url: String
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct SubmissionCreateStatusDetails {
     errors: Vec<SubmissionCreateStatusDetailInfo>,
 
@@ -153,9 +154,20 @@ pub struct SubmissionCreateStatusDetails {
     certification_reports: Vec<SubmissionCreateSertificationReport>
 }
 
+#[derive(Deserialize, Serialize, Debug)]
+pub struct SubmissionCreateAppPackageInfo {
+    #[serde(rename = "fileName")]
+    pub file_name: String,
+
+    #[serde(rename = "fileStatus")]
+    pub file_status: String
+    // minimumDirectXVersion: "None",
+    // minimumSystemRam: "None"
+}
+
 /// Данная структура представляет собой ответ после инициализации
 /// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#app-submission-object`
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct SubmissionCreateResponse {
     pub id: String,
 
@@ -179,5 +191,11 @@ pub struct SubmissionCreateResponse {
     pub file_upload_url: String,
 
     #[serde(rename = "friendlyName")]
-    pub friendly_name: String
+    pub friendly_name: String,
+
+    #[serde(rename = "applicationPackages")]
+    pub app_packages: Vec<SubmissionCreateAppPackageInfo>,
+
+    #[serde(flatten)]
+    pub other_fields: HashMap<String, Value>,
 }

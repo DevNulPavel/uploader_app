@@ -1,3 +1,8 @@
+use std::{
+    path::{
+        Path
+    }
+};
 use log::{
     debug
 };
@@ -89,7 +94,7 @@ impl MicrosoftAzureClient {
         Ok(())
     }
 
-    pub async fn upload_production_build(&self) -> Result<(), MicrosoftAzureError> {
+    pub async fn upload_production_build(&self, appxupload_file_path: &Path) -> Result<(), MicrosoftAzureError> {
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/python-code-examples-for-the-windows-store-submission-api
 
@@ -107,9 +112,17 @@ impl MicrosoftAzureClient {
         }
 
         // Создаем новый Submission для данного приложения
-        let submission = Submission::start_new(self.request_builder.clone())
+        debug!("Microsoft Azure: submission create try");
+        let mut submission = Submission::start_new(self.request_builder.clone())
             .await?;
         debug!("Microsoft Azure: submission created");
+
+        // Выполняем выгрузку файлика
+        debug!("Microsoft Azure: File uploading start");
+        submission
+            .upload_build_file(appxupload_file_path)
+            .await?;
+        debug!("Microsoft Azure: File uploading finished");
 
         Ok(())
     }

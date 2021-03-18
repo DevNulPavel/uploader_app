@@ -3,7 +3,8 @@ use quick_error::{
 };
 use super::{
     responses::{
-        ErrorResponseValue
+        ErrorResponseValue,
+        SubmissionStatusResponse
     }
 };
 
@@ -50,6 +51,23 @@ quick_error!{
 
         /// Нету файлика по этому пути
         NoFile(path: std::path::PathBuf){
+        }
+
+        /// Ошибка при открытии файлика
+        ZipOpenFailed(err: zip::result::ZipError){
+            from()
+        }
+
+        /// Внутри .zip файлика нету .appx / .appxupload
+        NoAppxFileInZip{
+        }
+
+        /// Получили какой-то кривой статус коммита
+        InvalidCommitStatus(status: String){
+        }
+
+        /// Получили какой-то кривой статус коммита
+        CommitFailed(response_data: SubmissionStatusResponse){
         }
     }
 }

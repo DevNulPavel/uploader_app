@@ -9,9 +9,18 @@ use log::{
 use quick_error::{
     ResultExt
 };
+use humansize::{
+    FileSize
+};
 use tokio::{
     fs::{
         File
+    },
+    io::{
+        AsyncBufRead,
+        AsyncBufReadExt,
+        AsyncRead,
+        AsyncReadExt
     }
 };
 use tokio_util::{
@@ -37,10 +46,16 @@ use crate::{
     error::{
         MicrosoftAzureError
     },
+    helpers::{
+        check_file_extention
+    },
     responses::{
         DataOrErrorResponse,
         SubmissionCreateResponse,
-        SubmissionCreateAppPackageInfo
+        SubmissionCreateAppPackageInfo,
+        SubmissionCommitResponse,
+        SubmissionStatusDetails,
+        SubmissionStatusResponse
     }
 };
 
@@ -111,95 +126,252 @@ impl Submission {
         Ok(())
     }
 
-    pub async fn upload_build_file(&mut self, appxupload_file_path: &Path) -> Result<(), MicrosoftAzureError>{
-        // TODO: Внутри файла еще лежит символьная информация, может быть ее тоже можно как-то указать
+    /// Выполнение выгрузки непосредственно файлика с билдом
+    async fn perform_file_uploading(&mut self, zip_file_path: &Path) -> Result<(), MicrosoftAzureError>{
+        debug!("Microsoft Azure: file uploading start");
 
+        // Получаем чистый HTTP клиент для выгрузки файлика
+        let http_client = self.request_builder
+            .get_http_client();
+
+        // Первым этапом идет выставление режима AppendBlob для выгрузки
+        // https://docs.microsoft.com/en-us/rest/api/storageservices/put-blob
+        // https://docs.microsoft.com/en-us/rest/api/storageservices/put-blob#remarks
+        // https://stackoverflow.com/questions/58724878/upload-large-files-1-gb-to-azure-blob-storage-through-web-api
+        http_client
+            .put(&self.data.file_upload_url)
+            .header("x-ms-blob-type", "AppendBlob")
+            .header(reqwest::header::CONTENT_LENGTH, 0)
+            .send()
+            .await?
+            .error_for_status()?;
+
+        // Создаем непосредственно урл для добавления данных
+        let append_data_url = {
+            // Парсим базовый Url
+            let mut append_data_url = reqwest::Url::parse(&self.data.file_upload_url)
+                .context("Upload url parsing error")?;
+
+            // Дополнительно добавляем к параметрам запроса значение appendblock
+            append_data_url
+                .query_pairs_mut()
+                .append_pair("comp", "appendblock");
+
+            append_data_url
+        };
+    
+        // Подготавливаем файлик для потоковой выгрузки
+        let mut source_file = File::open(zip_file_path)
+            .await
+            .context("Upload file open error")?;
+
+        // Получаем суммарный размер данных
+        let source_file_length = source_file
+            .metadata()
+            .await
+            .context("Upload file metadata receive error")?.len();
+
+        // Оставшийся размер выгрузки
+        let mut data_left = source_file_length as i64;
+        loop{
+            const BUFFER_MAX_SIZE: i64 = 1024*1024*3; // 4Mb - ограничение для отдельного куска
+
+            // Размер буффера
+            let buffer_size_limit = std::cmp::min(BUFFER_MAX_SIZE, data_left);
+            if buffer_size_limit <= 0 {
+                break;
+            }
+
+            // TODO: Убрать создание нового буффера каждый раз,
+            // Вроде бы как Hyper позволяет использовать slice для выгрузки
+            let mut buffer = Vec::<u8>::with_capacity(buffer_size_limit as usize);
+
+            // В данный буффер будем лишь писать сначала, поэтому можно не инициализировать данные ничем
+            unsafe{ buffer.set_len(buffer_size_limit as usize); }
+
+            // Читаем из файлика данные в буффер
+            let read_size = source_file
+                .read_exact(&mut buffer)
+                .await
+                .context("File read error")?;
+            
+            debug!("Microsoft azure: bytes read from file {}", read_size.file_size(humansize::file_size_opts::BINARY).unwrap());
+
+            // Отнимаем нужное значения размера данных
+            data_left = data_left - (read_size as i64);
+
+            // Обрезаем буффер на нужный размер
+            buffer.truncate(read_size);
+
+            // Непосредственно выгрузка
+            http_client
+                .put(append_data_url.clone())
+                .header(reqwest::header::CONTENT_LENGTH, read_size)
+                .body(buffer)
+                .send()
+                .await?
+                .error_for_status()?;
+            
+            debug!("Microsoft azure: bytes upload left {}", data_left.file_size(humansize::file_size_opts::BINARY).unwrap());
+        }
+
+        assert!(data_left == 0, "Data left must be zero after file uploading");
+
+        Ok(())
+    }
+
+    /// Данный метод занимается тем, что коммитит изменения на сервере
+    /// Описание: `https://docs.microsoft.com/en-us/windows/uwp/monetize/commit-an-app-submission` 
+    async fn commit_changes(&mut self) -> Result<(), MicrosoftAzureError> {
+        debug!("Microsoft Azure: commit request");
+
+        let new_info = self.request_builder
+            .clone()
+            .method(reqwest::Method::POST)
+            .submission_command("commit".to_string())
+            .build()
+            .await?
+            .header(reqwest::header::CONTENT_LENGTH, 0)
+            .send()
+            .await?
+            // .error_for_status()?
+            .json::<DataOrErrorResponse<SubmissionCommitResponse>>()
+            .await?
+            .into_result()?;
+
+        debug!("Microsoft Azure: commit response {:#?}", new_info);
+
+        if !new_info.status.eq("CommitStarted") {
+            return Err(MicrosoftAzureError::InvalidCommitStatus(new_info.status));
+        }
+        
+        Ok(())
+    }
+
+    /// C помощью данного метода мы ждем завершения выполнения коммита
+    /// Описание: `https://docs.microsoft.com/en-us/windows/uwp/monetize/get-status-for-an-app-submission`
+    async fn wait_commit_finished(&mut self) -> Result<(), MicrosoftAzureError> {
+        debug!("Microsoft Azure: wait submission commit result");
+
+        loop {
+            let status_response = self.request_builder
+                .clone()
+                .method(reqwest::Method::GET)
+                .submission_command("status".to_string())
+                .build()
+                .await?
+                .header(reqwest::header::CONTENT_LENGTH, 0)
+                .send()
+                .await?
+                // .error_for_status()?
+                .json::<DataOrErrorResponse<SubmissionStatusResponse>>()
+                .await?
+                .into_result()?;
+
+            debug!("Microsoft Azure: submission status response {:#?}", status_response);
+
+            match status_response.status.as_str() {
+                // Нормальное состояние для ожидания
+                "CommitStarted" => {
+                    tokio::time::delay_for(std::time::Duration::from_secs(15)).await;
+                },
+
+                // Коммит прошел успешно, прерываем ожидание
+                "PreProcessing" => {
+                    break;
+                }
+
+                // Ошибочный статус - ошибка
+                "CommitFailed" |
+                "None" |
+                "Canceled" | 
+                "PublishFailed" |
+                "PendingPublication" |
+                "Certification" |
+                "Publishing" |
+                "Published" |
+                "PreProcessingFailed" |
+                "CertificationFailed" |
+                "Release" |
+                "ReleaseFailed" =>{
+                    return Err(MicrosoftAzureError::CommitFailed(status_response));
+                }
+
+                // Неизвестный статус - ошибка
+                _ => {
+                    return Err(MicrosoftAzureError::InvalidCommitStatus(status_response.status));
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
+    pub async fn upload_build(&mut self, zip_file_path: &Path) -> Result<(), MicrosoftAzureError>{
         // Может быть нет фалика по этому пути
-        if !appxupload_file_path.exists() {
-            return Err(MicrosoftAzureError::NoFile(appxupload_file_path.to_owned()));
+        if !zip_file_path.exists() {
+            return Err(MicrosoftAzureError::NoFile(zip_file_path.to_owned()));
         }
 
         // Проверяем расширение данного файлика
-        {
-            appxupload_file_path
-                .extension()
-                .and_then(|ext|{
-                    ext.to_str()
-                })
-                .and_then(|ext|{
-                    if ext.eq("appxupload") {
-                        Some(())
-                    }else{
-                        None
-                    }
-                })
-                .ok_or(MicrosoftAzureError::InvalidUploadFileExtention)?;
+        if check_file_extention(zip_file_path, "zip") == false{
+            return Err(MicrosoftAzureError::InvalidUploadFileExtention);
         }
 
-        // Передаем имя файлика в информацию о сабмишене
-
-        // Получаем имя файлика внутри нашего .appxupload архива
-        /*let internal_appx_file_name = {
-            // Получаем имя файлика без расширения appxupload
-            let file_stem = appxupload_file_path
-                .file_stem()
-                .and_then(|file_stem|{
-                    file_stem.to_str()
+        // Открываем zip файлик и получаем имя .appx / .appxupload
+        let appx_file_name = {
+            let zip = zip::ZipArchive::new(std::fs::File::open(zip_file_path).context("Zip file open failed")?)?;
+            let name = zip
+                .file_names()
+                .filter_map(|path_str|{
+                    std::path::Path::new(path_str)
+                        .file_name()
+                        .and_then(|f|{
+                            f.to_str()
+                        })
                 })
-                .ok_or(MicrosoftAzureError::InvalidUploadFileExtention)?;
-            
-            format!("{}.appx", file_stem)
-        };*/
-        let file_name = appxupload_file_path
-            .file_name()
-            .and_then(|name|{
-                name.to_str()
-            })
-            .ok_or(MicrosoftAzureError::InvalidUploadFileExtention)?;
+                .filter(|path|{
+                    !path.starts_with(".") &&
+                    (path.ends_with(".appx") || path.ends_with(".appxupload"))
+                })
+                .next()
+                .ok_or(MicrosoftAzureError::NoAppxFileInZip)?;
+            name.to_owned()
+        };
 
-        debug!("New file name: {}", file_name);
+        // Передаем имя файлика в информацию о сабмишене
+        debug!("Microsoft Azure: .appx or .appxupload file in zip: {}", appx_file_name);
 
         // Модифицируем текущие полученные данные, добавляя туда имя файлика
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/update-an-app-submission
         self.data.app_packages.push(SubmissionCreateAppPackageInfo{
-            file_name: file_name.to_owned(),
+            file_name: appx_file_name.to_owned(),
             file_status: "PendingUpload".to_owned(),
             minimum_direct_x: "None".to_owned(),
             minimum_ram: "None".to_owned(),
             other_fields: Default::default()
         });
 
-        // Обновление данных у сабмишена
+        // Обновление данных у сабмишена на основе изменений текущих
         self
             .update_server_application_submission_info()
             .await?;
 
-        // Подготавливаем файлик для потоковой выгрузки
-        let file = File::open(appxupload_file_path).await.context("Upload file open error")?;
-        let file_length = file.metadata().await.context("Upload file metadate receive error")?.len();
-        let reader = FramedRead::new(file, BytesCodec::new());
-        let body = Body::wrap_stream(reader);
-
-        // let multipart = Form::new()
-            // .part("meta", Part::text("{}")
-            //         .mime_str("application/json; charset=UTF-8")
-            //         .expect("Meta set failed"))
-            // .part("body", Part::stream_with_length(body, file_length)
-            //         .file_name(file_name.to_owned()));
-
-        // Получаем чистый HTTP клиент для выгрузки файлика
-        let http_client = self.request_builder.get_http_client();
-
-        // Выполняем выгрузку
-        http_client
-            .put(&self.data.file_upload_url)
-            .header("x-ms-blob-type", "BlockBlob")
-            .header(reqwest::header::CONTENT_LENGTH, file_length)
-            .body(body)
-            .send()
-            .await?
-            .error_for_status()?;
+        // Выполняем непосредственно выгрузку на сервер нашего архива
+        self
+            .perform_file_uploading(zip_file_path)
+            .await?;
         
+        // Пытаемся закоммитить
+        self
+            .commit_changes()
+            .await?;
+
+        // Ждем завершения коммита
+        self
+            .wait_commit_finished()
+            .await?;
+
         Ok(())
     }
 }

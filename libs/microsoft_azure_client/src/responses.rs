@@ -155,7 +155,7 @@ pub struct SubmissionCreateSertificationReport {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct SubmissionCreateStatusDetails {
+pub struct SubmissionStatusDetails {
     errors: Vec<SubmissionCreateStatusDetailInfo>,
 
     warnings: Vec<SubmissionCreateStatusDetailInfo>,
@@ -194,7 +194,7 @@ pub struct SubmissionCreateResponse {
     pub status: String, // TODO: ENUM
 
     #[serde(rename = "statusDetails")]
-    pub status_details: SubmissionCreateStatusDetails,
+    pub status_details: SubmissionStatusDetails,
 
     #[serde(rename = "fileUploadUrl")]
     pub file_upload_url: String,
@@ -204,4 +204,25 @@ pub struct SubmissionCreateResponse {
 
     #[serde(flatten)]
     pub other_fields: HashMap<String, Value>,
+}
+
+//////////////////////////////////////////////////////////////////////
+
+/// Данная структура представляет собой ответ после инициализации
+/// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#app-submission-object`
+#[derive(Deserialize, Debug, Clone)]
+pub struct SubmissionCommitResponse {
+    pub status: String
+}
+
+//////////////////////////////////////////////////////////////////////
+
+/// Данная структура представляет собой ответ получения статуса после коммита
+/// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/get-status-for-an-app-submission`
+#[derive(Deserialize, Debug, Clone)]
+pub struct SubmissionStatusResponse {
+    pub status: String,
+
+    #[serde(rename = "statusDetails")]
+    pub status_details: SubmissionStatusDetails
 }

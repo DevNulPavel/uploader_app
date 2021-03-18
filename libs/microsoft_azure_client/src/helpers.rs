@@ -12,7 +12,7 @@ pub fn check_file_extention(path: &Path, required_extention: &str) -> bool {
             ext.to_str()
         })
         .and_then(|ext|{
-            if ext.eq("zip") {
+            if ext.eq(required_extention) {
                 Some(())
             }else{
                 None

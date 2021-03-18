@@ -111,8 +111,6 @@ impl MicrosoftAzureClient {
             debug!("Microsoft Azure: current pending removed");
         }
 
-        return Ok(());
-
         // Создаем новый Submission для данного приложения
         debug!("Microsoft Azure: submission create try");
         let mut submission = Submission::start_new(self.request_builder.clone())

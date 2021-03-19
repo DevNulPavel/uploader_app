@@ -319,33 +319,39 @@ impl Submission {
         }
 
         // Открываем zip файлик и получаем имя .appx / .appxupload
-        let appx_file_name = {
+        let appx_file_path = {
             let zip = zip::ZipArchive::new(std::fs::File::open(zip_file_path).context("Zip file open failed")?)?;
-            let name = zip
+            let path = zip
                 .file_names()
-                .filter_map(|path_str|{
-                    std::path::Path::new(path_str)
+                .filter(|full_path_str|{
+                    let file_name = std::path::Path::new(full_path_str)
                         .file_name()
                         .and_then(|f|{
                             f.to_str()
-                        })
-                })
-                .filter(|path|{
-                    !path.starts_with(".") &&
-                    (path.ends_with(".appx") || path.ends_with(".appxupload"))
+                        });
+                    if let Some(file_name) = file_name {
+                        if !file_name.starts_with(".") &&
+                            (file_name.ends_with(".appx") || file_name.ends_with(".appxupload")){
+                            true
+                        }else{
+                            false
+                        }
+                    }else{
+                        false
+                    }
                 })
                 .next()
                 .ok_or(MicrosoftAzureError::NoAppxFileInZip)?;
-            name.to_owned()
+            path.to_owned()
         };
 
         // Передаем имя файлика в информацию о сабмишене
-        debug!("Microsoft Azure: .appx or .appxupload file in zip: {}", appx_file_name);
+        debug!("Microsoft Azure: .appx or .appxupload file in zip: {}", appx_file_path);
 
         // Модифицируем текущие полученные данные, добавляя туда имя файлика
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/update-an-app-submission
         self.data.app_packages.push(SubmissionCreateAppPackageInfo{
-            file_name: appx_file_name.to_owned(),
+            file_name: appx_file_path.to_owned(),
             file_status: "PendingUpload".to_owned(),
             minimum_direct_x: "None".to_owned(),
             minimum_ram: "None".to_owned(),

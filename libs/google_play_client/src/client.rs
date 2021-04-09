@@ -79,7 +79,7 @@ impl GooglePlayClient {
         let edit = self
             .start_insert(&task.package_name)
             .await?;
-        // debug!("Google play edit result: {:#?}", edit.get_info());
+        debug!("Google play edit started");
 
         // Выгрузка
         let upload_result = edit

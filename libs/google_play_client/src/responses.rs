@@ -15,7 +15,7 @@ use serde::{
 
 #[derive(Deserialize, Debug)]
 pub struct ErrorResponseValue{
-    pub code: i64,
+    // pub code: i64,
     pub message: String,
     pub status: String
     // #[serde(flatten)]

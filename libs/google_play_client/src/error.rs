@@ -1,24 +1,58 @@
 use std::{
-    io,
-    error::{
-        Error
-    },
-    fmt::{
-        self,
-        Display,
-        Formatter
-    }
+    io
+};
+use quick_error::{
+    quick_error
 };
 use url::{
     ParseError
 };
 use super::{
     responses::{
-        ErrorResponse,
-        ErrorResponseValue
+        ErrorResponse
     }
 };
 
+quick_error! {
+    #[derive(Debug)]
+    pub enum GooglePlayError {
+        InvalidBaseAddr(err: String){
+        }
+        
+        EmptyUrlSegments{
+        }
+
+        URLError(err: ParseError){
+            from()
+        }
+
+        NetErr(context: &'static str, err: reqwest::Error){
+            context(context: &'static str, err: reqwest::Error) -> (context, err)
+        }
+
+        WrongFilePath{
+        }
+
+        InvalidFileExtention(err: &'static str){
+        }
+
+        FileError(err: io::Error){
+            from()
+        }
+
+        TokenIsExpired{
+        }
+
+        ResponseError(err: ErrorResponse){
+            from()
+        }
+
+        Custom(err: String){
+        }
+    }
+}
+
+/*
 #[derive(Debug)]
 pub enum GooglePlayError{
     InvalidBaseAddr(String),
@@ -58,7 +92,7 @@ impl Display for GooglePlayError{
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         writeln!(f, "Google play error: {:#?}", self)
     }
-}
+} 
 
 impl Error for GooglePlayError {
-}
+}*/

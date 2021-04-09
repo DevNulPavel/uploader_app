@@ -21,6 +21,9 @@ use tokio::{
 use serde_json::{
     json
 };
+use quick_error::{
+    ResultExt
+};
 use tokio_util::{
     codec::{
         BytesCodec,
@@ -58,9 +61,11 @@ impl AppEdit {
             .join_path("edits")
             .build()?
             .send()
-            .await?
+            .await
+            .context("Edits request fail")?
             .json::<DataOrErrorResponse<AppEditResponseOk>>()
-            .await?
+            .await
+            .context("Edits request json parse fail")?
             .into_result()?;
 
         Ok(AppEdit{
@@ -133,9 +138,11 @@ impl AppEdit {
             // .header("Content-Length", file_length)
             .multipart(multipart)
             .send()
-            .await?
+            .await
+            .context("Upload request fail")?
             .json::<DataOrErrorResponse<UploadResponseOk>>()
-            .await?
+            .await
+            .context("Upload request json parse failed")?
             .into_result()?;
             
         debug!("Upload result: {:?}", response);
@@ -170,9 +177,11 @@ impl AppEdit {
             .build()?
             .json(&body)
             .send()
-            .await?
+            .await
+            .context("Track update request failed")?
             .json::<TrackUpdateResponse>()
-            .await?;
+            .await
+            .context("Track update json parse failed")?;
 
         Ok(response)
     }
@@ -185,9 +194,11 @@ impl AppEdit {
             .edit_command("validate")
             .build()?
             .send()
-            .await?
+            .await
+            .context("Validate request failed")?
             .json::<DataOrErrorResponse<AppEditResponseOk>>()
-            .await?
+            .await
+            .context("Validate request json parse failed")?
             .into_result()?;
 
         Ok(response)
@@ -201,9 +212,11 @@ impl AppEdit {
             .edit_command("commit")
             .build()?
             .send()
-            .await?
+            .await
+            .context("Commit request failed")?
             .json::<DataOrErrorResponse<AppEditResponseOk>>()
-            .await?
+            .await
+            .context("Commit request json parse failed")?
             .into_result()?;
 
         Ok(response)

@@ -14,6 +14,9 @@ use log::{
 use serde_json::{
     json,
 };
+use reqwest_inspect_json::{
+    InspectJson
+};
 use super::{
     request_builder::{
         GoogleDriveRequestBuilder
@@ -124,7 +127,7 @@ impl GoogleDriveFolder {
             .multipart(multipart)
             .send()
             .await?
-            .json::<FilesUploadResponse>()
+            .inspect_json::<FilesUploadResponse, GoogleDriveError>(|d| { debug!("{}", d) })
             .await?
             .into_result()?;
 

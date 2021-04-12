@@ -14,6 +14,9 @@ use reqwest::{
     Client,
     Method
 };
+use reqwest_inspect_json::{
+    InspectJson
+};
 use serde_json::{
     json
 };
@@ -111,7 +114,9 @@ impl AppCenterClient {
             .send()
             .await?
             .error_for_status()?
-            .json::<ReleasesResponse>()
+            .inspect_json::<ReleasesResponse, AppCenterError>(|d| { 
+                debug!("{}", d); 
+            })
             .await?;
         
         debug!("App center releases response: {:#?}", releases_resp);
@@ -130,7 +135,9 @@ impl AppCenterClient {
             .send()
             .await?
             .error_for_status()?
-            .json()
+            .inspect_json::<UploadingFinishedSetStatusResponse, AppCenterError>(|d| { 
+                debug!("{}", d); 
+            })
             .await?;
 
         debug!("Update status response: {:#?}", update_status_resp);
@@ -149,7 +156,9 @@ impl AppCenterClient {
                 .send()
                 .await?
                 .error_for_status()?         
-                .json::<UploadingFinishedGetStatusResponse>()
+                .inspect_json::<UploadingFinishedGetStatusResponse, AppCenterError>(|d| { 
+                    debug!("{}", d); 
+                })
                 .await?;
 
             debug!("Update status response: {:#?}", update_status_resp);
@@ -258,7 +267,9 @@ impl AppCenterClient {
                 .error_for_status()?
                 /*.text()
                 .await?*/
-                .json::<ReleaseUpdateResponse>()
+                .inspect_json::<ReleaseUpdateResponse, AppCenterError>(|d| { 
+                    debug!("{}", d); 
+                })
                 .await?;
              
             debug!("Distribution groups set result: {:#?}", result);
@@ -284,7 +295,9 @@ impl AppCenterClient {
             .send()
             .await?
             .error_for_status()?
-            .json::<ReleaseInfoResponse>()
+            .inspect_json::<ReleaseInfoResponse, AppCenterError>(|d| { 
+                debug!("{}", d); 
+            })
             .await?;
         
         Ok(result)

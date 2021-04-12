@@ -4,6 +4,9 @@ use log::{
 use reqwest::{
     Method,
 };
+use reqwest_inspect_json::{
+    InspectJson
+};
 use super::{
     request_builder::{
         GoogleDriveRequestBuilder,
@@ -35,7 +38,7 @@ pub async fn get_files_list_with_query(request_builder: &GoogleDriveRequestBuild
         ])
         .send()
         .await?
-        .json::<FilesListResponse>()
+        .inspect_json::<FilesListResponse, GoogleDriveError>(|d| { debug!("{}", d) })
         .await?;
 
     debug!("Files list response: {:#?}", info);

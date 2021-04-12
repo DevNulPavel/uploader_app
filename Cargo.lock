@@ -48,6 +48,7 @@ dependencies = [
  "http",
  "log",
  "reqwest",
+ "reqwest_inspect_json",
  "serde",
  "serde_json",
  "tokio 0.2.24",
@@ -94,6 +95,7 @@ dependencies = [
  "log",
  "qrcode",
  "reqwest",
+ "reqwest_inspect_json",
  "serde",
  "serde_json",
  "tokio 0.2.24",
@@ -1183,6 +1185,7 @@ dependencies = [
  "mime",
  "mime_guess",
  "reqwest",
+ "reqwest_inspect_json",
  "serde",
  "serde_json",
  "tokio 0.2.24",
@@ -1202,8 +1205,10 @@ dependencies = [
  "log",
  "quick-error 2.0.0",
  "reqwest",
+ "reqwest_inspect_json",
  "serde",
  "serde_json",
+ "tap",
  "tokio 0.2.24",
  "tokio-util",
  "url",
@@ -2614,6 +2619,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "reqwest_inspect_json"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60da4b30fc5673ec82d7589d89cca9f29ee28271287a141129963cc04b0a381c"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "resolv-conf"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3145,9 +3162,9 @@ dependencies = [
 
 [[package]]
 name = "tap"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36474e732d1affd3a6ed582781b3683df3d0563714c59c39591e8ff707cf078e"
+checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "tempfile"

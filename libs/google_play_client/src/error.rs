@@ -26,8 +26,18 @@ quick_error! {
             from()
         }
 
-        NetErr(context: &'static str, err: reqwest::Error){
-            context(context: &'static str, err: reqwest::Error) -> (context, err)
+        // NetErr(context: &'static str, err: reqwest::Error){
+        //     context(context: &'static str, err: reqwest::Error) -> (context, err)
+        // }
+        NetErr(err: reqwest::Error){
+            from()
+        }
+
+        // JsonParseErr(context: &'static str, err: serde_json::Error){
+        //     context(context: &'static str, err: serde_json::Error) -> (context, err)
+        // }
+        JsonParseErr(err: serde_json::Error){
+            from()
         }
 
         WrongFilePath{

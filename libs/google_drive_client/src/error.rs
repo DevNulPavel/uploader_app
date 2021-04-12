@@ -24,6 +24,7 @@ pub enum GoogleDriveError{
     InvalidBaseAddr(String),
     URLError(ParseError),
     NetErr(reqwest::Error),
+    JsonError(serde_json::Error),
     Custom(String),
     WrongFilePath,
     FileError(io::Error),
@@ -50,6 +51,11 @@ impl From<reqwest::Error> for GoogleDriveError {
 impl From<ResponseErr> for GoogleDriveError {
     fn from(err: ResponseErr) -> GoogleDriveError {
         GoogleDriveError::ErrorResponse(err.error)
+    }
+}
+impl From<serde_json::Error> for GoogleDriveError {
+    fn from(err: serde_json::Error) -> GoogleDriveError {
+        GoogleDriveError::JsonError(err)
     }
 }
 

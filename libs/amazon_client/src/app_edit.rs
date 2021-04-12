@@ -9,6 +9,9 @@ use reqwest::{
     RequestBuilder,
     Body
 };
+use reqwest_inspect_json::{
+    InspectJson
+};
 use futures::{
     future::{
         join_all
@@ -94,7 +97,12 @@ impl<'a> AppEdit<'a> {
             // debug!("Prev: {}", new_text);
             // return Err(AmazonError::StartEditFailed);
 
-            if let Ok(response) = previous_edit_request.await?.json::<AmazonEditRespone>().await {
+            if let Ok(response) = previous_edit_request
+                .await?
+                .inspect_json::<AmazonEditRespone, AmazonError>(|data|{
+                    debug!("{}", data);
+                })
+                .await {
                 debug!("Previous edit received: {:#?}", response);
                 response
             }else if let Ok(response) = new_edit_request.await?.json::<AmazonEditRespone>().await {
@@ -120,7 +128,9 @@ impl<'a> AppEdit<'a> {
 
         if resp.status() == http::StatusCode::OK {
             let values = resp
-                .json::<Vec<ApkInfoResponse>>()
+                .inspect_json::<Vec<ApkInfoResponse>, AmazonError>(|data|{
+                    debug!("{}", data);
+                })
                 .await?;
             Ok(Some(values))
         } else if resp.status() == http::StatusCode::NO_CONTENT {
@@ -222,7 +232,9 @@ impl<'a> AppEdit<'a> {
             .body(body)
             .send()
             .await?
-            .json::<ApkInfoResponse>()
+            .inspect_json::<ApkInfoResponse, AmazonError>(|data|{
+                debug!("{}", data);
+            })
             .await?;
 
         debug!("Uploading finished: {:#?}", response);

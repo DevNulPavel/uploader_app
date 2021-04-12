@@ -18,6 +18,7 @@ pub enum AppCenterError{
     InvalidBaseAddr(String),
     URLError(ParseError),
     NetErr(reqwest::Error),
+    JsonParseErr(serde_json::Error),
     Custom(String),
     CustomDyn(Box<dyn std::error::Error + Send>),
     WrongFilePath,
@@ -38,6 +39,11 @@ impl From<io::Error> for AppCenterError {
 impl From<reqwest::Error> for AppCenterError {
     fn from(err: reqwest::Error) -> AppCenterError {
         AppCenterError::NetErr(err)
+    }
+}
+impl From<serde_json::Error> for AppCenterError {
+    fn from(err: serde_json::Error) -> AppCenterError {
+        AppCenterError::JsonParseErr(err)
     }
 }
 

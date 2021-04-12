@@ -21,6 +21,7 @@ pub enum AmazonError{
     InvalidBaseAddr(String),
     URLError(ParseError),
     NetErr(reqwest::Error),
+    JsonParseErr(serde_json::Error),
     WrongFilePath,
     InvalidFileExtention(&'static str),
     FileError(io::Error),
@@ -49,6 +50,11 @@ impl From<io::Error> for AmazonError {
 impl From<reqwest::Error> for AmazonError {
     fn from(err: reqwest::Error) -> AmazonError {
         AmazonError::NetErr(err)
+    }
+}
+impl From<serde_json::Error> for AmazonError {
+    fn from(err: serde_json::Error) -> AmazonError {
+        AmazonError::JsonParseErr(err)
     }
 }
 

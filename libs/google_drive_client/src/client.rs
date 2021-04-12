@@ -16,6 +16,9 @@ use tokio::{
         File
     }
 };
+use reqwest_inspect_json::{
+    InspectJson
+};
 use tokio_util::{
     codec::{
         BytesCodec,
@@ -148,7 +151,9 @@ impl GoogleDriveClient {
             .multipart(multipart)
             .send()
             .await?
-            .json::<FilesUploadResponse>()
+            .inspect_json::<FilesUploadResponse, GoogleDriveError>(|data|{
+                debug!("{}", data);
+            })
             .await?
             .into_result()?;
 

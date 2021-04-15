@@ -139,7 +139,8 @@ impl<'a> GooglePlayRequestBuilder {
             .base
             .http_client
             .request(self.method, url.as_str())
-            .bearer_auth(token);
+            .bearer_auth(token)
+            .header(reqwest::header::CONTENT_LENGTH, 0);
 
         Ok(builder)
     }

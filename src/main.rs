@@ -204,7 +204,11 @@ async fn async_main() {
     debug!("Env params: {:#?}", env_params);
 
     // Общий клиент для запросов
-    let http_client = reqwest::Client::new();
+    let http_client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(60))
+        .connect_timeout(std::time::Duration::from_secs(60))
+        .build()
+        .expect("Http client build failed");
 
     // Вектор с активными футурами выгрузки
     let UploadersResult{result_slack, active_workers} = build_uploaders(http_client.clone(), env_params, app_parameters);

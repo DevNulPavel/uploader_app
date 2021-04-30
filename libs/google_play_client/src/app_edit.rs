@@ -65,6 +65,7 @@ impl AppEdit {
             .method(Method::POST)
             .join_path("edits")
             .build()?
+            .header(reqwest::header::CONTENT_LENGTH, 0)
             .send()
             .await?
             .inspect_json::<DataOrErrorResponse<AppEditResponseOk>, GooglePlayError>(|v|{ 
@@ -136,14 +137,19 @@ impl AppEdit {
             .method(Method::POST)
             .join_path(upload_type)
             .build()?
+            .timeout(std::time::Duration::from_secs(600)) // В доках рекомендуется большой таймаут
             .query(&[
                 ("uploadType", "multipart"),
                 ("ackBundleInstallationWarning", "true")
             ])
+            // .header(reqwest::header::CONTENT_LENGTH, file_length)
             // .header("Content-Length", file_length)
+            // .body(body)
             .multipart(multipart)
             .send()
             .await?
+            // .text()
+            // .await?;
             .inspect_json::<DataOrErrorResponse<UploadResponseOk>, GooglePlayError>(|v|{ 
                 debug!("{:?}", v);
             })
@@ -153,6 +159,7 @@ impl AppEdit {
         debug!("Upload result: {:?}", response);
 
         Ok(response)
+        // Err(GooglePlayError::Custom("Fail".to_owned()))
     }
 
     pub async fn update_track_to_complete(&self, track: &str, app_version: &UploadResponseOk) -> Result<TrackUpdateResponse, GooglePlayError>{
@@ -199,6 +206,7 @@ impl AppEdit {
             .method(Method::POST)
             .edit_command("validate")
             .build()?
+            .header(reqwest::header::CONTENT_LENGTH, 0)
             .send()
             .await?
             .bytes()
@@ -217,6 +225,7 @@ impl AppEdit {
             .method(Method::POST)
             .edit_command("commit")
             .build()?
+            .header(reqwest::header::CONTENT_LENGTH, 0)
             .send()
             .await?
             .inspect_json::<DataOrErrorResponse<AppEditResponseOk>, GooglePlayError>(|v|{ 

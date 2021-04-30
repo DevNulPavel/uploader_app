@@ -135,12 +135,13 @@ impl<'a> GooglePlayRequestBuilder {
         }
 
         let token = self.base.token.as_str();
+        
         let builder = self
             .base
             .http_client
             .request(self.method, url.as_str())
-            .bearer_auth(token)
-            .header(reqwest::header::CONTENT_LENGTH, 0);
+            .bearer_auth(token);
+            // .header(reqwest::header::CONTENT_LENGTH, 0); // Лучше тут не добавлять
 
         Ok(builder)
     }

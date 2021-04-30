@@ -9,9 +9,10 @@ source test_environment.env
 # env | grep -i "GOOGLE_DRIVE"
 
 # Rust environment setup
-# export RUST_LOG=uploader_app=trace
 export RUST_BACKTRACE=1
-export RUST_LOG=uploader_app=trace,app_center_client=trace,google_drive_client=trace,reqwest=trace
+export RUST_LOG=trace
+# export RUST_LOG=uploader_app=trace
+# export RUST_LOG=uploader_app=trace,app_center_client=trace,google_drive_client=trace,reqwest=trace
 
 # App center
 # UPLOAD_PARAMS=()
@@ -31,8 +32,8 @@ export RUST_LOG=uploader_app=trace,app_center_client=trace,google_drive_client=t
 # target/debug/uploader_app "${UPLOAD_PARAMS[@]}"
 
 # Google play
-# UPLOAD_PARAMS=()
-# UPLOAD_PARAMS+=(--google_play_upload_file '/Users/devnul/Downloads/IslandTales-universal-gplay-12.3.0-42-14042021_1827-10c4f698/IslandTales-universal-gplay-12.3.0-42-14042021_1827-10c4f698.aab')
-# UPLOAD_PARAMS+=(--google_play_target_track 'internal')
-# UPLOAD_PARAMS+=(--google_play_package_name 'com.gameinsight.gplay.islandtales')
-# target/debug/uploader_app "${UPLOAD_PARAMS[@]}"
+UPLOAD_PARAMS=()
+UPLOAD_PARAMS+=(--google_play_upload_file '/Users/devnul/Downloads/Island2-universal-gplay-v12.12.6-b391-28042021_1742-11ad1b3e/Island2-universal-gplay-v12.12.6-b391-28042021_1742-11ad1b3e.aab')
+UPLOAD_PARAMS+=(--google_play_target_track 'internal')
+UPLOAD_PARAMS+=(--google_play_package_name 'com.gameinsight.gplay.island2')
+target/debug/uploader_app "${UPLOAD_PARAMS[@]}"

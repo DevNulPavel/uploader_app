@@ -241,7 +241,7 @@ async fn async_main() {
     wait_results(active_workers, result_senders).await;
 }
 
-fn setup_logs() -> tracing_appender::non_blocking::WorkerGuard {
+fn setup_logs() {
     use tracing_subscriber::{
         prelude::{
             *
@@ -264,23 +264,22 @@ fn setup_logs() -> tracing_appender::non_blocking::WorkerGuard {
         .and_then(env_print_layer);
 
     // Trace to file
-    let (writer, guard) = tracing_appender::non_blocking(tracing_appender::rolling::never("uploading_logs/", "uploading.txt"));
+    /*let (writer, guard) = tracing_appender::non_blocking(tracing_appender::rolling::never("uploading_logs/", "uploading.txt"));
     let trace_fileter_layer = tracing_subscriber::filter::LevelFilter::TRACE;
     let trace_print_layer = tracing_subscriber::fmt::layer()
-        .json()
+        //.json()
+        .with_ansi(false)
         .with_writer(writer);
     let trace_layer = trace_fileter_layer
-        .and_then(trace_print_layer);
+        .and_then(trace_print_layer);*/
 
     // Собираем все слои вместе
     let reg = tracing_subscriber::registry()
-        .with(env_layer)
-        .with(trace_layer);
+        //.with(trace_layer)
+        .with(env_layer);
 
     tracing::subscriber::set_global_default(reg)
         .expect("Log subscriber set failed");
-
-    guard
 }
 
 fn main() {

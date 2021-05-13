@@ -3,10 +3,14 @@ use std::{
         Path
     }
 };
-use log::{
+use tracing::{
     info,
     debug,
-    //error
+    error,
+    instrument
+};
+use tap::{
+    TapFallible
 };
 use yup_oauth2::{
     read_service_account_key, 
@@ -31,6 +35,7 @@ use super::{
     }
 };
 
+#[instrument(skip(client, env_params, app_params))]
 pub async fn upload_in_google_play(client: reqwest::Client, 
                                    env_params: GooglePlayEnvironment, 
                                    app_params: GooglePlayParams) -> UploadResult {
@@ -51,7 +56,10 @@ pub async fn upload_in_google_play(client: reqwest::Client,
     let token = auth
         .token(&["https://www.googleapis.com/auth/androidpublisher"])
         .await
-        .expect("Failed to get google play token");
+        .tap_err(|err|{
+            error!(%err, "Token receive failed");
+        })?;
+    debug!(?token, "Token received");
 
     // Клиент
     let client = GooglePlayClient::new(client, token);
@@ -65,9 +73,12 @@ pub async fn upload_in_google_play(client: reqwest::Client,
     };
     let uploaded_version = client
         .upload(task)
-        .await?;
+        .await
+        .tap_err(|err|{
+            error!(%err, "Uploading failed");
+        })?;
 
-    debug!("Google play: uploaded version {}", uploaded_version);
+    debug!(uploaded_version, "Google play: uploaded version");
 
     let file_name = path
         .file_name()

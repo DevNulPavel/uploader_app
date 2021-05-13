@@ -11,10 +11,11 @@ use tokio::{
         delay_for
     }
 };
-use log::{
+use tracing::{
     info,
     //debug,
-    error
+    error,
+    instrument
 };
 use app_center_client::{
     AppCenterClient,
@@ -38,11 +39,11 @@ use super::{
     }
 };
 
+#[instrument(skip(http_client, app_center_env_params, app_center_app_params, git_info))]
 pub async fn upload_in_app_center(http_client: reqwest::Client, 
                                   app_center_env_params: AppCenterEnvironment,
                                   app_center_app_params: AppCenterParams,
                                   git_info: Option<GitEnvironment>) -> UploadResult {
-
     info!("Start app center uploading");
 
     let file_path: PathBuf = app_center_app_params.input_file.into();
@@ -96,7 +97,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
 
     let mut iteration_number = 0_u32;
     loop {
-        info!("App center uploading iteration number: {}", iteration_number);
+        info!(iteration_number, "App center uploading iteration");
         iteration_number += 1;
 
         // Результат
@@ -132,7 +133,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
 
             // Если все плохо - делаем несколько попыток c паузой
             Err(err) => {
-                error!("App center uploading failed with error: {}", err);
+                error!(%err, "App center uploading failed with error");
 
                 if iteration_number <= 5 {
                     info!("Wait some time before new iteration");

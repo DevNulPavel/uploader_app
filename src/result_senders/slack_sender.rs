@@ -12,7 +12,7 @@ use std::{
         Pin
     }
 };
-use log::{
+use tracing::{
     error
 };
 use reqwest::{

@@ -29,10 +29,11 @@ use tokio::{
         JoinHandle
     }
 };
-use log::{
+use tracing::{
     debug,
     error,
-    // trace
+    // trace,
+    instrument
 };
 use ssh2::{
     Session
@@ -102,6 +103,7 @@ impl From<ResolveError> for SshError{
 
 ////////////////////////////////////////////////////////////////////////
 
+#[instrument]
 fn get_valid_address(server: String) -> Result<String, SshError> {
     let addr = if let Ok(_) = &server.parse::<SocketAddrV4>(){
         server
@@ -128,6 +130,7 @@ fn get_valid_address(server: String) -> Result<String, SshError> {
     Ok(addr)
 }
 
+#[instrument(skip(session))]
 fn try_to_auth(user: String, 
               pass: Option<String>, 
               key_file: Option<String>, 
@@ -160,6 +163,7 @@ fn try_to_auth(user: String,
     Ok(())
 }
 
+#[instrument(skip(session))]
 fn get_remote_abs_path(target_dir: &str, session: &Session) -> Result<PathBuf, SshError> {
     let input_path = Path::new(target_dir);
     let result_absolute_folder_path = if input_path.has_root() {
@@ -181,6 +185,7 @@ fn get_remote_abs_path(target_dir: &str, session: &Session) -> Result<PathBuf, S
     Ok(result_absolute_folder_path)
 }
 
+#[instrument(skip(session))]
 fn create_result_folder(path: &Path, session: &Session) -> Result<(), SshError>{
     // TODO: Exit status всегда 0 даже если есть папка
     /*let folder_exist = {
@@ -205,9 +210,10 @@ fn create_result_folder(path: &Path, session: &Session) -> Result<(), SshError>{
     Ok(())
 }
 
+#[instrument(skip(session, result_absolute_folder_path, paths))]
 fn upload_files<'a, P>(session: &Session, 
-                    result_absolute_folder_path: &Path, 
-                    paths: &'a [P]) -> Result<Vec<&'a str>, SshError>
+                       result_absolute_folder_path: &Path, 
+                       paths: &'a [P]) -> Result<Vec<&'a str>, SshError>
 where 
     P: AsRef<Path>
 {
@@ -254,7 +260,10 @@ where
 
 pub async fn upload_by_ssh(env_params: SSHEnvironment, 
                            app_params: SSHParams) -> UploadResult {
+
     let join: JoinHandle<Result<UploadResultData, SshError>> = spawn_blocking(move || {
+        let _span = tracing::info_span!("upload_by_ssh");
+
         // Тип аддреса
         let addr = get_valid_address(env_params.server)?;
         debug!("SSH server address: {}", addr);
@@ -327,11 +336,11 @@ mod tests{
 
     #[tokio::test]
     async fn test_ssh_uploader(){
-        pretty_env_logger::formatted_builder()
+        /*pretty_env_logger::formatted_builder()
             // .is_test(true)
             .filter_level(log::LevelFilter::Debug)
             .try_init()
-            .ok();
+            .ok();*/
 
         let env_params = SSHEnvironment{
             server: "10.51.254.143".to_owned(), // TODO: DNS name

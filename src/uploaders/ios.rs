@@ -22,9 +22,12 @@ use tokio::{
         Command
     }
 };
-use log::{
+use tracing::{
     debug,
-    // error
+    error
+};
+use tap::{
+    TapFallible
 };
 use crate::{
     app_parameters::{
@@ -73,6 +76,8 @@ impl error::Error for IOSError {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) -> UploadResult {
+    let _span = tracing::info_span!("upload_in_ios");
+
     // Проверка наличия файлика
     let path = Path::new(&app_params.ipa_file_path);
     if !path.exists(){
@@ -95,9 +100,14 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
             "-p", &env_params.pass
         ])
         .spawn()
-        .map_err(|err| IOSError::SpawnFailed(err))?
+        .map_err(|err| {
+            IOSError::SpawnFailed(err)
+        })?
         .wait_with_output()
-        .await?;
+        .await
+        .tap_err(|err|{
+            error!(%err, "xcrun start failed");
+        })?;
 
     // TODO: Как-то не очень хорошо получается вывод
 
@@ -127,7 +137,7 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
             IOSError::OutputParseFailed(err)
         })?;
 
-    debug!("Uploading util output: {}", text);
+    debug!(%text, "Uploading util output");
 
     // Финальное сообщение
     let message = format!("IOS uploading finished:\n- {}", file_name);

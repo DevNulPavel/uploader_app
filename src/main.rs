@@ -21,10 +21,11 @@ use futures::{
         join_all
     }
 };
-use log::{
+use tracing::{
     info,
+    error,
     debug,
-    error
+    instrument
 };
 use self::{
     app_parameters::{
@@ -50,6 +51,7 @@ use self::{
     }
 };
 
+#[instrument(skip(active_workers, result_senders))]
 async fn wait_results<W, S>(mut active_workers: Vec<W>, 
                             mut result_senders: Vec<Box<S>>)
 where 
@@ -59,7 +61,8 @@ where
     // Смотрим на завершающиеся воркеры
     while active_workers.len() > 0 {
         // Выбираем успешную фьючу, получаем оставшиеся
-        let (res, _, left_workers) = select_all(active_workers).await;
+        let (res, _, left_workers) = select_all(active_workers)
+            .await;
         active_workers = left_workers;
 
         // Обрабатываем результат
@@ -87,8 +90,7 @@ where
                         sender.send_error(err.as_ref())
                     });
                 join_all(futures_iter).await;
-
-                error!("Uploading task failed: {}", err);
+                error!(%err, "Uploading task failed");
             }
         }
     }
@@ -99,6 +101,7 @@ struct UploadersResult {
     active_workers: Vec<Pin<Box<dyn Future<Output=UploadResult> + Send>>>
 }
 
+#[instrument(skip(http_client, env_params, app_parameters))]
 fn build_uploaders(http_client: reqwest::Client, 
                    env_params: AppEnvValues, 
                    app_parameters: AppParameters) -> UploadersResult {
@@ -108,11 +111,12 @@ fn build_uploaders(http_client: reqwest::Client,
     // Создаем задачу выгрузки в AppCenter
     match (env_params.app_center, app_parameters.app_center) {
         (Some(app_center_env_params), Some(app_center_app_params)) => {
-            info!("App center uploading task created");
             let fut = upload_in_app_center(http_client.clone(), 
                                            app_center_env_params, 
                                            app_center_app_params,
-                                           env_params.git).boxed();
+                                           env_params.git)
+                .boxed();
+            info!("App center uploading task created");
             active_workers.push(fut);
         },
         _ => {}
@@ -121,10 +125,11 @@ fn build_uploaders(http_client: reqwest::Client,
     // Создаем задачу выгрузки в Google drive
     match (env_params.google_drive, app_parameters.goolge_drive) {
         (Some(env_params), Some(app_params)) => {
-            info!("Google drive uploading task created");
             let fut = upload_in_google_drive(http_client.clone(),
                                              env_params, 
-                                             app_params).boxed();
+                                             app_params)
+                .boxed();
+            info!("Google drive uploading task created");                                             
             active_workers.push(fut);
         },
         _ => {}
@@ -133,10 +138,11 @@ fn build_uploaders(http_client: reqwest::Client,
     // Создаем задачу выгрузки в Google Play
     match (env_params.google_play, app_parameters.goolge_play) {
         (Some(env_params), Some(app_params)) => {
-            info!("Google play uploading task created");
             let fut = upload_in_google_play(http_client.clone(),
                                             env_params, 
-                                            app_params).boxed();
+                                            app_params)
+                .boxed();
+            info!("Google play uploading task created");                
             active_workers.push(fut);
         },
         _ => {}
@@ -145,10 +151,11 @@ fn build_uploaders(http_client: reqwest::Client,
     // Создаем задачу выгрузки в Amazon
     match (env_params.amazon, app_parameters.amazon) {
         (Some(env_params), Some(app_params)) => {
-            info!("Google play uploading task created");
             let fut = upload_in_amazon(http_client,
                                        env_params, 
-                                       app_params).boxed();
+                                       app_params)
+                .boxed();
+            info!("Google play uploading task created");                
             active_workers.push(fut);
         },
         _ => {}
@@ -157,9 +164,10 @@ fn build_uploaders(http_client: reqwest::Client,
     // Создаем задачу выгрузки в IOS
     match (env_params.ios, app_parameters.ios) {
         (Some(env_params), Some(app_params)) => {
-            info!("IOS uploading task created");
             let fut = upload_in_ios(env_params, 
-                                    app_params).boxed();
+                                    app_params)
+                .boxed();
+            info!("IOS uploading task created");
             active_workers.push(fut);
         },
         _ => {}
@@ -168,9 +176,10 @@ fn build_uploaders(http_client: reqwest::Client,
     // Создаем задачу выгрузки на SSH сервер
     match (env_params.ssh, app_parameters.ssh) {
         (Some(env_params), Some(app_params)) => {
-            info!("SSH uploading task created");
             let fut = upload_by_ssh(env_params, 
-                                    app_params).boxed();
+                                    app_params)
+                .boxed();
+            info!("SSH uploading task created");
             active_workers.push(fut);
         },
         _ => {}
@@ -196,12 +205,12 @@ async fn async_main() {
             })
     }));
     
-    debug!("App params: {:#?}", app_parameters);
+    debug!(?app_parameters, "App params");
 
     // Получаем параметры окружения
     let env_params = AppEnvValues::parse();
 
-    debug!("Env params: {:#?}", env_params);
+    debug!(?env_params, "Env params");
 
     // Общий клиент для запросов
     let http_client = reqwest::Client::builder()
@@ -232,21 +241,51 @@ async fn async_main() {
     wait_results(active_workers, result_senders).await;
 }
 
-fn setup_logs(){
-    // Активируем логирование и настраиваем уровни вывода
-    // https://rust-lang-nursery.github.io/rust-cookbook/development_tools/debugging/config_log.html
-    //#[cfg(debug_assertions)]
-    /*{
-        if !std::env::var("RUST_LOG").is_ok() {
-            std::env::set_var("RUST_LOG", "uploader_app=trace");
+fn setup_logs() -> tracing_appender::non_blocking::WorkerGuard {
+    use tracing_subscriber::{
+        prelude::{
+            *
         }
-    }*/
-    pretty_env_logger::init();
+    };
+
+    // Поддержка стандартных вызовов log у других библиотек
+    tracing_log::LogTracer::init()
+        .expect("Log proxy set failed");
+
+    // Слой фильтрации сообщений
+    let env_filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_|{
+            tracing_subscriber::EnvFilter::default()
+                .add_directive(tracing::Level::INFO.into())
+        });
+    let env_print_layer = tracing_subscriber::fmt::layer()
+        .with_writer(std::io::stdout);
+    let env_layer = env_filter_layer
+        .and_then(env_print_layer);
+
+    // Trace to file
+    let (writer, guard) = tracing_appender::non_blocking(tracing_appender::rolling::never("uploading_logs/", "uploading.txt"));
+    let trace_fileter_layer = tracing_subscriber::filter::LevelFilter::TRACE;
+    let trace_print_layer = tracing_subscriber::fmt::layer()
+        .json()
+        .with_writer(writer);
+    let trace_layer = trace_fileter_layer
+        .and_then(trace_print_layer);
+
+    // Собираем все слои вместе
+    let reg = tracing_subscriber::registry()
+        .with(env_layer)
+        .with(trace_layer);
+
+    tracing::subscriber::set_global_default(reg)
+        .expect("Log subscriber set failed");
+
+    guard
 }
 
 fn main() {
     // Активируем логирование и настраиваем уровни вывода
-    setup_logs();
+    let _guard = setup_logs();
 
     // Запускаем асинхронный рантайм
     let mut runtime = Builder::default()

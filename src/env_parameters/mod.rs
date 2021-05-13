@@ -33,7 +33,7 @@ macro_rules! describe_env_values {
             
                 let is_some = params.any_field_is_some();
                 if !is_some{
-                    panic!("Empty enviroment Environment");
+                    panic!("Empty enviroment");
                 }
             
                 params

@@ -10,7 +10,7 @@ use reqwest::{
 use serde_json::{
     json
 };
-use log::{
+use tracing::{
     debug
 };
 use super::{

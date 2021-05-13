@@ -7,7 +7,7 @@ use std::{
         Once
     }
 };
-use log::{
+use tracing::{
     debug,
     // info
 };

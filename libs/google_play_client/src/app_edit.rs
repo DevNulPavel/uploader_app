@@ -10,7 +10,7 @@ use reqwest::{
         Part
     }
 };
-use log::{
+use tracing::{
     debug
 };
 use tokio::{

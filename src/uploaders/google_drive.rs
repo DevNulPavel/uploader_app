@@ -3,10 +3,14 @@ use std::{
         PathBuf
     }
 };
-use log::{
+use tracing::{
     info,
     debug,
-    //error
+    error,
+    instrument
+};
+use tap::{
+    TapFallible
 };
 use yup_oauth2::{
     read_service_account_key, 
@@ -31,28 +35,37 @@ use super::{
     }
 };
 
-pub async fn upload_in_google_drive(client: reqwest::Client, env_params: GoogleDriveEnvironment, app_params: GoogleDriveParams) -> UploadResult {
+#[instrument(skip(client, env_params, app_params))]
+pub async fn upload_in_google_drive(client: reqwest::Client, 
+                                    env_params: GoogleDriveEnvironment, 
+                                    app_params: GoogleDriveParams) -> UploadResult {
     info!("Start google drive uploading");
 
     // Содержимое Json файлика ключа 
     let key = read_service_account_key(env_params.auth_file)
-        .await?;
-    
-    debug!("Google drive key read success");
+        .await
+        .tap_err(|err|{
+            error!(%err, "Credentials read failed");
+        })?;
+    info!("Google drive key read success");
 
     // Аутентификация на основе прочитанного файлика
     let auth = ServiceAccountAuthenticator::builder(key)
-          .build()
-          .await?;
-
-    debug!("Google drive auth success");
+        .build()
+        .await
+        .tap_err(|err|{
+            error!(%err, "Service account build failed");
+        })?;
+    info!("Google drive auth success");
  
     // Add the scopes to the secret and get the token.
     let token = auth
         .token(&["https://www.googleapis.com/auth/drive"])
-        .await?;
-        
-    debug!("Google drive token received");
+        .await
+        .tap_err(|err|{
+            error!(%err, "Token receive failed");
+        })?;
+    info!("Google drive token received");
 
     // Клиент
     let client = GoogleDriveClient::new(client, token);
@@ -64,17 +77,22 @@ pub async fn upload_in_google_drive(client: reqwest::Client, env_params: GoogleD
             .await?
             .ok_or_else(||{
                 "Target google drive folder is not found"
+            })
+            .tap_err(|err|{
+                error!(%err, "Folder find failed");
             })?;
         if let Some(sub_folder_name) = app_params.target_subfolder_name{
             folder
                 .create_subfolder_if_needed(&sub_folder_name)
-                .await?
+                .await
+                .tap_err(|err|{
+                    error!(%err, "Subfolder create failed");
+                })?
         }else{
             folder
         }
     };
-
-    debug!("Google drive target folder received: {}", folder.get_info().id);
+    debug!(folder_id = %folder.get_info().id, "Target folder received");
 
     // Грузим файлы
     let mut results = Vec::with_capacity(app_params.files.len());
@@ -87,9 +105,12 @@ pub async fn upload_in_google_drive(client: reqwest::Client, env_params: GoogleD
         };
         let result = client
             .upload(task)
-            .await?;
+            .await
+            .tap_err(|err|{
+                error!(%err, "Upload failed");
+            })?;
         
-        debug!("Google drive uploading result: {:#?}", result);
+        debug!(?result, "Google drive uploading result");
         results.push(result);
     }
 

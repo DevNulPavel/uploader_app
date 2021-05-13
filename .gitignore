@@ -1,4 +1,6 @@
 /target
+/logs
+/uploading_logs
 **/*.rs.bk
 flame-graph.html
 *.env

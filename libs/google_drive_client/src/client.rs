@@ -7,8 +7,9 @@ use std::{
 use into_result::{
     IntoResult
 };
-use log::{
+use tracing::{
     debug, 
+    trace,
     info
 };
 use tokio::{
@@ -107,7 +108,7 @@ impl GoogleDriveClient {
             .ok_or(GoogleDriveError::WrongFilePath)?
             .to_str()
             .ok_or(GoogleDriveError::WrongFilePath)?;
-        debug!("File name: {}", file_name);
+        debug!(%file_name, "File name");
         
         // let mut total_uploaded = 0;
         // let file_name_stream = file_name.to_owned();
@@ -152,12 +153,12 @@ impl GoogleDriveClient {
             .send()
             .await?
             .inspect_json::<FilesUploadResponse, GoogleDriveError>(|data|{
-                debug!("{}", data);
+                trace!(?data, "Files response");
             })
             .await?
             .into_result()?;
 
-        debug!("Uploading response: {:#?}", info);
+        trace!(?info, "Uploading response", );
 
         Ok(GoogleDriveFile::new(self.request_builder.clone(), info))
     }
@@ -205,7 +206,7 @@ impl GoogleDriveClient {
             .upload_file(&task.parent_folder, &task.file_path)
             .await?;
 
-        debug!("Upload res: {:#?}", upload_res.get_info());
+        debug!(res = ?upload_res.get_info(), "Upload res");
 
         // Смена владельца
         if let Some(email) = task.owner_email{

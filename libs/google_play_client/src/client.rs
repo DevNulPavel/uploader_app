@@ -6,7 +6,7 @@ use std::{
         Arc
     }
 };
-use log::{
+use tracing::{
     debug, 
     info
 };

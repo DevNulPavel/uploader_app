@@ -8,7 +8,7 @@ use reqwest::{
 use into_result::{
     IntoResult
 };
-use log::{
+use tracing::{
     debug
 };
 use serde_json::{
@@ -140,7 +140,7 @@ impl GoogleDriveFolder {
             .await?;
 
         if let Some(found) = found_sub_folder_id{
-            debug!("Found subfolder id: {:?}", found.get_info());
+            debug!(id = ?found.get_info(), "Found subfolder id");
             return Ok(found);
         }else{
             return self.create_sub_folder(subfolder_name).await;

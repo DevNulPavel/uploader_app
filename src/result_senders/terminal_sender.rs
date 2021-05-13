@@ -6,7 +6,7 @@ use std::{
 use async_trait::{
     async_trait
 };
-use log::{
+use tracing::{
     error,
     info
 };

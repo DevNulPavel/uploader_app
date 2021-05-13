@@ -28,7 +28,7 @@ use tokio_util::{
         BytesCodec
     }
 };
-use log::{
+use tracing::{
     debug,
     // error
 };

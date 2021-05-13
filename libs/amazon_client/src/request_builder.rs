@@ -1,4 +1,4 @@
-use log::{
+use tracing::{
     debug,
     // info
 };

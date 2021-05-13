@@ -3,8 +3,15 @@ use std::{
         Path
     }
 };
-use log::{
+use tracing::{
     debug
+};
+use tap::{
+    TapFallible
+};
+use tracing::{
+    error,
+    instrument
 };
 use amazon_client::{
     AmazonClient,
@@ -25,19 +32,25 @@ use crate::{
     }
 };
 
-
+#[instrument(skip(http_client, env_params, app_params))]
 pub async fn upload_in_amazon(http_client: reqwest::Client, 
                               env_params: AmazonEnvironment, 
                               app_params: AmazonParams) -> UploadResult {
 
     let token: AmazonAccessToken = request_token(&http_client, &env_params.client_id, &env_params.client_secret)
-        .await?;
+        .await
+        .tap_err(|err|{
+            error!(%err, "Access token request failed");
+        })?;
 
-    let token_str = token
-        .as_str_checked()
-        .expect("Token string get failed");
-
-    debug!("Amazon token: {:#?}", token_str);
+    {
+        let token_str = token
+            .as_str_checked()
+            .tap_err(|err|{
+                error!(%err, "Invalid token");
+            })?;
+            debug!(%token_str, "Amazon token");
+    }
 
     let file_path = Path::new(&app_params.file_path);
 
@@ -49,7 +62,10 @@ pub async fn upload_in_amazon(http_client: reqwest::Client,
     };
     client
         .upload(task)
-        .await?;
+        .await
+        .tap_err(|err|{
+            error!(%err, "Amazon uploading error");
+        })?;
 
     // Имя файла
     let file_name = file_path

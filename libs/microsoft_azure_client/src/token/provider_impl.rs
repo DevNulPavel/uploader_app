@@ -10,7 +10,7 @@ use std::{
 use async_trait::{
     async_trait
 };
-use log::{
+use tracing::{
     // info,
     debug
 };
@@ -141,10 +141,8 @@ impl TokenProviderDefault {
     where 
         D: std::fmt::Display 
     {
-        let token_api_url = Url::parse(api_url)
-            .context("Token url base url error")?
-            .join(&format!("{}/oauth2/token", tenant_id))
-            .context("Token url join error")?;
+        let token_api_url = Url::parse(api_url)?
+            .join(&format!("{}/oauth2/token", tenant_id))?;
 
         // Создаем Arc на получателя токена
         let inner = Arc::new(InnerData{

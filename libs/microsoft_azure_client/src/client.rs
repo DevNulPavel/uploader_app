@@ -3,8 +3,9 @@ use std::{
         Path
     }
 };
-use log::{
-    debug
+use tracing::{
+    debug,
+    instrument
 };
 use reqwest::{
     Client
@@ -35,6 +36,7 @@ pub struct MicrosoftAzureClient{
 }
 
 impl MicrosoftAzureClient {
+    #[instrument(skip(http_client, tenant_id, client_id, client_secret, application_id))]
     pub fn new<D: std::fmt::Display>(http_client: Client, 
                                      tenant_id: D,
                                      client_id: String,
@@ -59,6 +61,7 @@ impl MicrosoftAzureClient {
     }
 
     /// Данный метод позволяет получить информацию по текущему приложению
+    #[instrument(skip(self))]
     async fn get_application_info(&self) -> Result<ApplicationInfoResponse, MicrosoftAzureError>{
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/get-an-app
         let response = self.request_builder
@@ -77,6 +80,7 @@ impl MicrosoftAzureClient {
     }
 
     /// Данный метод позволяет удалить ожидающий билд
+    #[instrument(skip(self, pending_info))]
     async fn remove_pending_submission(&self, pending_info: ApplicationInfoSubmissionData) -> Result<(), MicrosoftAzureError>{
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/delete-an-app-submission
 
@@ -94,20 +98,25 @@ impl MicrosoftAzureClient {
         Ok(())
     }
 
+    #[instrument(err, skip(self, zip_upload_file_path))]
     pub async fn upload_production_build(&self, zip_upload_file_path: &Path) -> Result<(), MicrosoftAzureError> {
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/python-code-examples-for-the-windows-store-submission-api
 
         // Сначала запрашиваем информацию о текущем приложении
         debug!("Microsoft Azure: request application info");
-        let current_app_info = self.get_application_info().await?;
-        debug!("Microsoft Azure: current application info: {:#?}", current_app_info);
+        let current_app_info = self
+            .get_application_info()
+            .await?;
+        debug!(?current_app_info, "Microsoft Azure: current application info");
 
         // Затем нужно проверить, нет ли у нас сейчас каких-то ожидающих сабмитов,
         // если есть - выполняем удаление
         if let Some(pending_info) = current_app_info.pending_app_submission {
-            debug!("Microsoft Azure: remove current pending: {:#?}", pending_info);
-            self.remove_pending_submission(pending_info).await?;
+            debug!(?pending_info, "Microsoft Azure: remove current pending");
+            self
+                .remove_pending_submission(pending_info)
+                .await?;
             debug!("Microsoft Azure: current pending removed");
         }
 

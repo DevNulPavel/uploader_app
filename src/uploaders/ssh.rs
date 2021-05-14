@@ -205,7 +205,7 @@ fn create_result_folder(path: &Path, session: &Session) -> Result<(), SshError>{
             return Err(SshError::DirectoryCreateFailed(status));
         }
         channel.close()?;
-        debug!("Directory {} created", path.display());
+        debug!(dir = %path.display(), "Directory created");
     }
     Ok(())
 }
@@ -233,7 +233,9 @@ where
         local_filenames.push(local_file_name);
         let remote_path = result_absolute_folder_path
                 .join(local_file_name);
-        debug!("Uploading start: local {}, remote {}", local_path.display(), remote_path.display());
+        debug!(local = %local_path.display(), 
+               remote = %remote_path.display(), 
+               "Uploading start");
 
         let mut file = std::fs::File::open(&local_path)?;
         let size = file.metadata()?.len();
@@ -253,7 +255,9 @@ where
         remote_file.close()?;
         remote_file.wait_close()?;
 
-        debug!("Uploading finished: local {}, remote {}", local_path.display(), remote_path.display());
+        debug!(local = %local_path.display(), 
+               remote = %remote_path.display(), 
+               "Uploading finished");
     }
     Ok(local_filenames)
 }
@@ -266,7 +270,7 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment,
 
         // Тип аддреса
         let addr = get_valid_address(env_params.server)?;
-        debug!("SSH server address: {}", addr);
+        debug!(%addr, "SSH server address");
 
         let stream = TcpStream::connect(addr)?;
         debug!("Stream created");
@@ -282,7 +286,7 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment,
 
         // Абсолютный путь на сервере к папке
         let result_absolute_folder_path = get_remote_abs_path(&app_params.target_dir, &session)?;
-        debug!("Absolute path: {}", result_absolute_folder_path.display());
+        debug!(?result_absolute_folder_path, "Absolute path");
         
         // Создание папки если надо
         create_result_folder(&result_absolute_folder_path, &session)?;

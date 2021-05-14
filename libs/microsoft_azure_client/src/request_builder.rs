@@ -11,6 +11,9 @@ use std::{
     // debug,
     // info
 // };
+use tracing_error::{
+    SpanTrace
+};
 use reqwest::{
     Client,
     Url,
@@ -105,7 +108,7 @@ impl<'a> RequestBuilder {
         {
             let mut segments = url.path_segments_mut()
                 .map_err(|_|{
-                    MicrosoftAzureError::UnvalidUrlSegments
+                    MicrosoftAzureError::UnvalidUrlSegments(SpanTrace::capture())
                 })?;
             // Базовая часть
             segments.push("v1.0");

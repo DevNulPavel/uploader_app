@@ -38,7 +38,7 @@ impl<'a> AmazonAppRequestBuilder<'a> {
         }
         
         let api_url = Url::parse(&base_addr)?;
-        debug!("Api url: {}", api_url.as_str());
+        debug!(api_url = %api_url.as_str(), "Api url");
 
         Ok(AmazonAppRequestBuilder{
             http_client,

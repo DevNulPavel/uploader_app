@@ -3,11 +3,8 @@ use std::{
         Path
     }
 };
-use log::{
+use tracing::{
     debug
-};
-use quick_error::{
-    ResultExt
 };
 use humansize::{
     FileSize
@@ -149,8 +146,7 @@ impl Submission {
         // Создаем непосредственно урл для добавления данных
         let append_data_url = {
             // Парсим базовый Url
-            let mut append_data_url = reqwest::Url::parse(&self.data.file_upload_url)
-                .context("Upload url parsing error")?;
+            let mut append_data_url = reqwest::Url::parse(&self.data.file_upload_url)?;
 
             // Дополнительно добавляем к параметрам запроса значение appendblock
             append_data_url
@@ -162,14 +158,13 @@ impl Submission {
     
         // Подготавливаем файлик для потоковой выгрузки
         let mut source_file = File::open(zip_file_path)
-            .await
-            .context("Upload file open error")?;
+            .await?;
 
         // Получаем суммарный размер данных
         let source_file_length = source_file
             .metadata()
-            .await
-            .context("Upload file metadata receive error")?.len();
+            .await?
+            .len();
 
         // Оставшийся размер выгрузки
         let mut data_left = source_file_length as i64;
@@ -192,8 +187,7 @@ impl Submission {
             // Читаем из файлика данные в буффер
             let read_size = source_file
                 .read_exact(&mut buffer)
-                .await
-                .context("File read error")?;
+                .await?;
             
             debug!("Microsoft azure: bytes read from file {}", read_size.file_size(humansize::file_size_opts::BINARY).unwrap());
 
@@ -320,7 +314,7 @@ impl Submission {
 
         // Открываем zip файлик и получаем имя .appx / .appxupload
         let appx_file_path = {
-            let zip = zip::ZipArchive::new(std::fs::File::open(zip_file_path).context("Zip file open failed")?)?;
+            let zip = zip::ZipArchive::new(std::fs::File::open(zip_file_path)?)?;
             let path = zip
                 .file_names()
                 .filter(|full_path_str|{

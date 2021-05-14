@@ -4,6 +4,9 @@ version = "0.2.0"
 authors = ["Pavel Ershov <pershov@game-insight.com>"]
 edition = "2018"
 
+[profile.dev]
+split-debuginfo = "unpacked"
+
 [features]
 default = []
 flame_it = ["flame", "flamer"]
@@ -17,6 +20,7 @@ serde_json = "1.0"
 tracing = "0.1"
 tracing-subscriber = "0.2"
 tracing-log = "0.1"
+tracing-error = "0.1"
 # tracing-appender = "0.1"
 clap = "2.33"
 async-trait = "0.1"
@@ -31,16 +35,11 @@ app_center_client = {path="libs/app_center_client", features=["rustls"]}
 google_drive_client = {path="libs/google_drive_client", features=["rustls"]}
 google_play_client = {path="libs/google_play_client", features=["rustls"]}
 amazon_client = {path="libs/amazon_client", features=["rustls"]}
-# microsoft_azure_client = {path="libs/microsoft_azure_client", features=["rustls"]}
+microsoft_azure_client = {path="libs/microsoft_azure_client", features=["rustls"]}
 any_field_is_some = {path="libs/any_field_is_some"}
 flame = {version="0.2.2", optional=true}
 flamer = {version="0.4.0", optional=true}
-
-[dependencies.slack_client_lib]
-git = "https://github.com/DevNulPavel/slack_client_lib.git"
-rev = "7a747b9537439ef776f43fcf77dbcc294635a1b8"
-features=["rustls"]
-# tag="v1.0.2"
+slack_client_lib = { git = "https://github.com/DevNulPavel/slack_client_lib.git", rev = "7a747b9537439ef776f43fcf77dbcc294635a1b8", features = ["rustls"] }
 
 [dev-dependencies]
 rand = "0.8.0"

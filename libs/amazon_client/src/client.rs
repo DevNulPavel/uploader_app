@@ -3,10 +3,13 @@ use std::{
         Path
     }
 };
-// use log::{
-//     debug, 
-//     info
-// };
+use tracing::{
+    instrument,
+    error
+};
+use tap::{
+    TapFallible
+};
 use reqwest::{
     Client,
     // Method,  
@@ -51,20 +54,41 @@ impl AmazonClient {
         }
     }
 
+    #[instrument(skip(self, app_id))]
     async fn build_edit<'a>(&'a self, app_id: &str) -> Result<AppEdit<'a>, AmazonError> {
-        let request_builder = AmazonAppRequestBuilder::new(self.http_client.clone(), &self.token, app_id)?;
+        let request_builder = AmazonAppRequestBuilder::new(self.http_client.clone(), &self.token, app_id)
+            .tap_err(|err|{
+                error!(%err, "Request builder create failed");
+            })?;
 
-        let edit = AppEdit::new(request_builder).await?;
+        let edit = AppEdit::new(request_builder)
+            .await?;
         
         Ok(edit)
     }
 
+    #[instrument(skip(self, task))]
     pub async fn upload(&self, task: AmazonUploadTask<'_>) -> Result<(), AmazonError> {
-        let edit = self.build_edit(task.application_id).await?;
+        let edit = self
+            .build_edit(task.application_id)
+            .await
+            .tap_err(|err|{
+                error!(%err, "Edit create failed");
+            })?;
 
-        edit.remove_old_apks().await?;
+        edit
+            .remove_old_apks()
+            .await
+            .tap_err(|err|{
+                error!(%err, "Remove old apps failed");
+            })?;
 
-        let _info = edit.upload_new_apk(task.file_path).await?;
+        let _info = edit
+            .upload_new_apk(task.file_path)
+            .await
+            .tap_err(|err|{
+                error!(%err, "Upload failed");
+            })?;
 
         // Валидация и коммит вроде как запрещены текущим аккаунтом, делаем лишь выгрузку
         // edit.validate().await?;

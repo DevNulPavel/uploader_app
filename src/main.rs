@@ -273,10 +273,14 @@ fn setup_logs() {
     let trace_layer = trace_fileter_layer
         .and_then(trace_print_layer);*/
 
+    // Error trace capture layer
+    let err_layer = tracing_error::ErrorLayer::default();
+
     // Собираем все слои вместе
     let reg = tracing_subscriber::registry()
         //.with(trace_layer)
-        .with(env_layer);
+        .with(env_layer)
+        .with(err_layer);
 
     tracing::subscriber::set_global_default(reg)
         .expect("Log subscriber set failed");

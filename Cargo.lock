@@ -50,6 +50,7 @@ dependencies = [
  "reqwest_inspect_json",
  "serde",
  "serde_json",
+ "tap",
  "tokio 0.2.24",
  "tokio-util",
  "tracing",
@@ -258,6 +259,27 @@ name = "bytes"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e4cec68f03f32e44924783795810fa50a7035d8c8ebe78580ad7e6c703fba38"
+
+[[package]]
+name = "bzip2"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42b7c3cbf0fa9c1b82308d57191728ca0256cb821220f4e2fd410a72ade26e3b"
+dependencies = [
+ "bzip2-sys",
+ "libc",
+]
+
+[[package]]
+name = "bzip2-sys"
+version = "0.1.10+1.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17fa3d1ac1ca21c5c4e36a97f3c3eb25084576f6fc47bf0139c1123434216c6c"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+]
 
 [[package]]
 name = "cargo_metadata"
@@ -591,6 +613,18 @@ dependencies = [
  "flame",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "flate2"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd3aec53de10fe96d7d8c565eb17f2c687bb5518a2ec453b5b1252964526abe0"
+dependencies = [
+ "cfg-if 1.0.0",
+ "crc32fast",
+ "libc",
+ "miniz_oxide 0.4.3",
 ]
 
 [[package]]
@@ -929,6 +963,12 @@ name = "httpdate"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
+
+[[package]]
+name = "humansize"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6cab2627acfc432780848602f3f558f7e9dd427352224b0d9324025796d2a5e"
 
 [[package]]
 name = "humantime"
@@ -1276,6 +1316,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "157b4208e3059a8f9e78d559edc658e13df41410cb3ae03979c83130067fdd87"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "microsoft_azure_client"
+version = "1.0.0"
+dependencies = [
+ "async-trait",
+ "cow_arc",
+ "dirs",
+ "env_logger",
+ "futures",
+ "humansize",
+ "quick-error 2.0.0",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tap",
+ "tokio 0.2.24",
+ "tokio-util",
+ "tracing",
+ "tracing-error",
+ "url",
+ "zip",
 ]
 
 [[package]]
@@ -2718,6 +2781,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-error"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4d7c0b83d4a500748fa5879461652b361edf5c9d51ede2a2ac03875ca185e24"
+dependencies = [
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "tracing-futures"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2906,6 +2979,7 @@ dependencies = [
  "google_play_client",
  "image",
  "lazy_static 1.4.0",
+ "microsoft_azure_client",
  "qrcode",
  "rand 0.8.0",
  "reqwest",
@@ -2915,6 +2989,7 @@ dependencies = [
  "tap",
  "tokio 0.2.24",
  "tracing",
+ "tracing-error",
  "tracing-log",
  "tracing-subscriber",
  "trust-dns-resolver",
@@ -3207,4 +3282,18 @@ dependencies = [
  "serde_json",
  "tokio 0.2.24",
  "url",
+]
+
+[[package]]
+name = "zip"
+version = "0.5.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c83dc9b784d252127720168abd71ea82bf8c3d96b17dc565b5e2a02854f2b27"
+dependencies = [
+ "byteorder",
+ "bzip2",
+ "crc32fast",
+ "flate2",
+ "thiserror",
+ "time",
 ]

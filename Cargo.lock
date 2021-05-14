@@ -92,6 +92,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.40"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28b2cd92db5cbd74e8e5028f7e27dd7aa3090e89e4f2a197cc7c8dfb69c7063b"
+
+[[package]]
 name = "app_center_client"
 version = "1.0.0"
 dependencies = [
@@ -820,12 +826,14 @@ dependencies = [
 name = "google_drive_client"
 version = "1.0.0"
 dependencies = [
+ "anyhow",
  "dirs",
  "env_logger",
  "futures",
  "into-result",
  "mime",
  "mime_guess",
+ "quick-error 2.0.0",
  "reqwest",
  "reqwest_inspect_json",
  "serde",
@@ -833,6 +841,7 @@ dependencies = [
  "tokio 0.2.24",
  "tokio-util",
  "tracing",
+ "tracing-error",
  "url",
  "yup-oauth2",
 ]

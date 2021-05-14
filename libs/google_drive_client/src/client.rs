@@ -10,7 +10,8 @@ use into_result::{
 use tracing::{
     debug, 
     trace,
-    info
+    info,
+    instrument
 };
 use tokio::{
     fs::{
@@ -99,6 +100,7 @@ impl GoogleDriveClient {
         }
     }
 
+    #[instrument(skip(self, parent_folder, file_path))]
     async fn upload_file(&self, parent_folder: &GoogleDriveFolder, file_path: &Path) -> Result<GoogleDriveFile, GoogleDriveError> {
         // https://developers.google.com/drive/api/v3/reference/files/create
         // https://developers.google.com/drive/api/v3/manage-uploads
@@ -163,6 +165,7 @@ impl GoogleDriveClient {
         Ok(GoogleDriveFile::new(self.request_builder.clone(), info))
     }
 
+    #[instrument(skip(self, folder_id))]
     pub async fn get_folder_for_id(&self, folder_id: &str) -> Result<Option<GoogleDriveFolder>, GoogleDriveError> {
         // TODO: Указание конкретного ID не работает почему-то
         // let query = format!("(mimeType = 'application/vnd.google-apps.folder') and \
@@ -198,6 +201,7 @@ impl GoogleDriveClient {
         Ok(None)
     }
 
+    #[instrument(skip(self, task))]
     pub async fn upload(&self, task: GoogleDriveUploadTask<'_>) -> Result<GoogleDriveUploadResult, GoogleDriveError> {
         info!("Before upload");
 
@@ -232,7 +236,7 @@ impl GoogleDriveClient {
                 })
             },
             _ => {
-                Err(GoogleDriveError::Custom("Web view link is missing".to_owned()))
+                Err(GoogleDriveError::Custom(tracing_error::SpanTrace::capture(), "Web view link is missing".to_owned()))
             }
         }
     }

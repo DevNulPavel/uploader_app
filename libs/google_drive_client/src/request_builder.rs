@@ -51,7 +51,7 @@ impl GoogleDriveRequestBuilder {
         const BASE_ADDR: &str = "https://www.googleapis.com/";
 
         if !BASE_ADDR.ends_with("/"){
-            return Err(GoogleDriveError::InvalidBaseAddr("Base addr must ends with /".to_owned()));
+            return Err(GoogleDriveError::InvalidBaseAddr(tracing_error::SpanTrace::capture(), "Base addr must ends with /".to_owned()));
         }
         
         let api_url = Url::parse(BASE_ADDR)?;
@@ -102,7 +102,7 @@ impl GoogleDriveRequestBuilder {
         let full_url = api_url.join(path)?;
 
         if token.is_expired(){
-            return Err(GoogleDriveError::TokenIsExpired);
+            return Err(GoogleDriveError::TokenIsExpired(tracing_error::SpanTrace::capture()));
         }
 
         let token = token.as_str();

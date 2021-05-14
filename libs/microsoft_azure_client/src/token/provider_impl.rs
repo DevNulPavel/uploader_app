@@ -14,9 +14,6 @@ use tracing::{
     // info,
     debug
 };
-use quick_error::{
-    ResultExt
-};
 use reqwest::{
     Client,
     header::{

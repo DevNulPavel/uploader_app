@@ -65,7 +65,7 @@ impl AppEdit {
             .method(Method::POST)
             .join_path("edits")
             .build()?
-            .header(reqwest::header::CONTENT_LENGTH, 0)
+            .header(reqwest::header::CONTENT_LENGTH, "0")
             .send()
             .await?
             .inspect_json::<DataOrErrorResponse<AppEditResponseOk>, GooglePlayError>(|v|{ 
@@ -206,7 +206,7 @@ impl AppEdit {
             .method(Method::POST)
             .edit_command("validate")
             .build()?
-            .header(reqwest::header::CONTENT_LENGTH, 0)
+            .header(reqwest::header::CONTENT_LENGTH, "0")
             .send()
             .await?
             .bytes()
@@ -225,7 +225,7 @@ impl AppEdit {
             .method(Method::POST)
             .edit_command("commit")
             .build()?
-            .header(reqwest::header::CONTENT_LENGTH, 0)
+            .header(reqwest::header::CONTENT_LENGTH, "0")
             .send()
             .await?
             .inspect_json::<DataOrErrorResponse<AppEditResponseOk>, GooglePlayError>(|v|{ 

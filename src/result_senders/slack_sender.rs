@@ -201,7 +201,7 @@ impl SlackResultSender {
                     /*let cache_file_path = PathBuf::new()
                         .join(dirs::home_dir().unwrap())
                         .join(".cache/uploader_app/users_cache.json");
-                    let cache = UsersJsonCache::new(cache_file_path).await;*/
+                    let cache = Some(UsersJsonCache::new(cache_file_path).await);*/
 
                     // Sqlite cache
                     let cache_file_path = PathBuf::new()

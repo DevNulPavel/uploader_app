@@ -9,6 +9,12 @@ use tracing::{
 use humansize::{
     FileSize
 };
+use tracing::{
+    instrument
+};
+use serde_json::{
+    json
+};
 use tokio::{
     fs::{
         File
@@ -48,83 +54,80 @@ use crate::{
     },
     responses::{
         DataOrErrorResponse,
-        SubmissionCreateResponse,
-        SubmissionCreateAppPackageInfo,
-        SubmissionCommitResponse,
-        // SubmissionStatusDetails,
+        FlightCreateResponse,
+        FlightSubmissionsCreateResponse,
+        FlightSubmissionCommitResponse,
         SubmissionStatusResponse
     }
 };
 
 
 /// Внутренняя структура по работе с submission
-pub struct Submission {
+pub struct FlightSubmission {
     request_builder: RequestBuilder,
-    data: SubmissionCreateResponse
+    data: FlightSubmissionsCreateResponse
 }
 
-impl Submission {
+impl FlightSubmission {
     /// Инициализируем новый экземпляр выливки
-    pub async fn start_new(request_builder: RequestBuilder) -> Result<Submission, MicrosoftAzureError> {
+    #[instrument(skip(request_builder))]
+    pub async fn start_new(request_builder: RequestBuilder) -> Result<FlightSubmission, MicrosoftAzureError> {
         // Выполняем запрос создания нового сабмишена
-        // https://docs.microsoft.com/en-us/windows/uwp/monetize/create-an-app-submission
+        // https://docs.microsoft.com/en-us/windows/uwp/monetize/create-a-flight
         let info = request_builder
             .clone()
             .method(reqwest::Method::POST)
-            .join_path("submissions".to_owned())    
+            .join_path("flights".to_owned())
+            .build()
+            .await?
+            // .header(reqwest::header::CONTENT_LENGTH, "0")
+            .json(&json!({
+                "friendlyName": "API flight",
+                "groupIds": [
+                    "1" // TODO: !!!
+                ],
+                // "rankHigherThan": ""
+            }))
+            .send()
+            .await?
+            .json::<DataOrErrorResponse<FlightCreateResponse>>()
+            .await?
+            .into_result()?;
+        debug!("Microsoft Azure, new flight response: {:#?}", info);
+
+        // Создаем новый реквест билдер на основании старого, но уже с полученным submission id 
+        let request_builder = request_builder
+            .clone()
+            .flight_id(info.flight_id.clone());
+
+        // Создаем новую flight submission
+        let info = request_builder
+            .clone()
+            .method(reqwest::Method::POST)
+            .join_path("submissions".to_owned())
             .build()
             .await?
             .header(reqwest::header::CONTENT_LENGTH, "0")
             .send()
             .await?
-            .error_for_status()?
-            .json::<DataOrErrorResponse<SubmissionCreateResponse>>()
+            .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
             .await?
             .into_result()?;
+        debug!("Microsoft Azure, new flight submission response: {:#?}", info);        
         
-        debug!("Microsoft Azure, new submission response: {:#?}", info);
-
         // Создаем новый реквест билдер на основании старого, но уже с полученным submission id 
-        let new_builder = request_builder
+        let request_builder = request_builder
             .clone()
             .submission_id(info.id.clone());
 
-        Ok(Submission{
-            request_builder: new_builder,
+        Ok(FlightSubmission{
+            request_builder,
             data: info
         })
     }
 
-    /// Данный метод необходим для обновления информации приложения по текущему сабмишену,
-    /// параметры передаются просто в виде Json словаря, так как список параметров огромный
-    /// После успешного выполнения запроса, обновляем внутренние данные сабмишена
-    /// Информация по параметрам: `https://docs.microsoft.com/en-us/windows/uwp/monetize/update-an-app-submission`
-    async fn update_server_application_submission_info(&mut self) -> Result<(), MicrosoftAzureError> {
-        debug!("Microsoft Azure: new submission update");
-
-        let new_info = self.request_builder
-            .clone()
-            .method(reqwest::Method::PUT)
-            .build()
-            .await?
-            .json(&self.data)
-            .send()
-            .await?
-            //.error_for_status()?
-            .json::<DataOrErrorResponse<SubmissionCreateResponse>>()
-            .await?
-            .into_result()?;
-
-        debug!("Microsoft Azure: new submission update result: {:#?}", new_info);
-
-        // Сохряняем новые данные
-        self.data = new_info;
-        
-        Ok(())
-    }
-
     /// Выполнение выгрузки непосредственно файлика с билдом
-    async fn perform_file_uploading(&mut self, zip_file_path: &Path) -> Result<(), MicrosoftAzureError>{
+    async fn perform_file_uploading(&self, file_path: &Path) -> Result<(), MicrosoftAzureError>{
         debug!("Microsoft Azure: file uploading start");
 
         // Получаем чистый HTTP клиент для выгрузки файлика
@@ -138,7 +141,7 @@ impl Submission {
         http_client
             .put(&self.data.file_upload_url)
             .header("x-ms-blob-type", "AppendBlob")
-            .header(reqwest::header::CONTENT_LENGTH, 0)
+            .header(reqwest::header::CONTENT_LENGTH, "0")
             .send()
             .await?
             .error_for_status()?;
@@ -157,7 +160,7 @@ impl Submission {
         };
     
         // Подготавливаем файлик для потоковой выгрузки
-        let mut source_file = File::open(zip_file_path)
+        let mut source_file = File::open(file_path)
             .await?;
 
         // Получаем суммарный размер данных
@@ -200,7 +203,7 @@ impl Submission {
             // Непосредственно выгрузка
             http_client
                 .put(append_data_url.clone())
-                .header(reqwest::header::CONTENT_LENGTH, read_size)
+                .header(reqwest::header::CONTENT_LENGTH, read_size.to_string())
                 .body(buffer)
                 .send()
                 .await?
@@ -215,8 +218,8 @@ impl Submission {
     }
 
     /// Данный метод занимается тем, что коммитит изменения на сервере
-    /// Описание: `https://docs.microsoft.com/en-us/windows/uwp/monetize/commit-an-app-submission` 
-    async fn commit_changes(&mut self) -> Result<(), MicrosoftAzureError> {
+    /// Описание: `https://docs.microsoft.com/en-us/windows/uwp/monetize/commit-a-flight-submission` 
+    async fn commit_changes(&self) -> Result<(), MicrosoftAzureError> {
         debug!("Microsoft Azure: commit request");
 
         let new_info = self.request_builder
@@ -225,11 +228,11 @@ impl Submission {
             .submission_command("commit".to_string())
             .build()
             .await?
-            .header(reqwest::header::CONTENT_LENGTH, 0)
+            .header(reqwest::header::CONTENT_LENGTH, "0")
             .send()
             .await?
             // .error_for_status()?
-            .json::<DataOrErrorResponse<SubmissionCommitResponse>>()
+            .json::<DataOrErrorResponse<FlightSubmissionCommitResponse>>()
             .await?
             .into_result()?;
 
@@ -243,8 +246,8 @@ impl Submission {
     }
 
     /// C помощью данного метода мы ждем завершения выполнения коммита
-    /// Описание: `https://docs.microsoft.com/en-us/windows/uwp/monetize/get-status-for-an-app-submission`
-    async fn wait_commit_finished(&mut self) -> Result<(), MicrosoftAzureError> {
+    /// Описание: `https://docs.microsoft.com/en-us/windows/uwp/monetize/get-status-for-a-flight-submission`
+    async fn wait_commit_finished(&self) -> Result<(), MicrosoftAzureError> {
         debug!("Microsoft Azure: wait submission commit result");
 
         loop {
@@ -254,7 +257,7 @@ impl Submission {
                 .submission_command("status".to_string())
                 .build()
                 .await?
-                .header(reqwest::header::CONTENT_LENGTH, 0)
+                .header(reqwest::header::CONTENT_LENGTH, "0")
                 .send()
                 .await?
                 // .error_for_status()?
@@ -301,23 +304,24 @@ impl Submission {
         Ok(())
     }
 
-    pub async fn upload_build(&mut self, zip_file_path: &Path) -> Result<(), MicrosoftAzureError>{
+    #[instrument(skip(self))]
+    pub async fn upload_build(&self, zip_file_path: &Path) -> Result<(), MicrosoftAzureError>{
         // Может быть нет фалика по этому пути
         if !zip_file_path.exists() {
             return Err(MicrosoftAzureError::NoFile(zip_file_path.to_owned()));
         }
 
         // Проверяем расширение данного файлика
-        if check_file_extention(zip_file_path, "zip") == false{
+        if check_file_extention(zip_file_path, ".zip") == false{
             return Err(MicrosoftAzureError::InvalidUploadFileExtention);
         }
 
-        // Открываем zip файлик и получаем имя .appx / .appxupload
-        let appx_file_path = {
+        // Открываем zip файлик и получаем имя .appx / .appxupload там
+        {
             let zip = zip::ZipArchive::new(std::fs::File::open(zip_file_path)?)?;
-            let path = zip
+            let contains_file = zip
                 .file_names()
-                .filter(|full_path_str|{
+                .any(|full_path_str|{
                     let file_name = std::path::Path::new(full_path_str)
                         .file_name()
                         .and_then(|f|{
@@ -333,29 +337,11 @@ impl Submission {
                     }else{
                         false
                     }
-                })
-                .next()
-                .ok_or(MicrosoftAzureError::NoAppxFileInZip)?;
-            path.to_owned()
+                });
+            if !contains_file {
+               return Err(MicrosoftAzureError::NoAppxFileInZip); 
+            }
         };
-
-        // Передаем имя файлика в информацию о сабмишене
-        debug!("Microsoft Azure: .appx or .appxupload file in zip: {}", appx_file_path);
-
-        // Модифицируем текущие полученные данные, добавляя туда имя файлика
-        // https://docs.microsoft.com/en-us/windows/uwp/monetize/update-an-app-submission
-        self.data.app_packages.push(SubmissionCreateAppPackageInfo{
-            file_name: appx_file_path.to_owned(),
-            file_status: "PendingUpload".to_owned(),
-            minimum_direct_x: "None".to_owned(),
-            minimum_ram: "None".to_owned(),
-            other_fields: Default::default()
-        });
-
-        // Обновление данных у сабмишена на основе изменений текущих
-        self
-            .update_server_application_submission_info()
-            .await?;
 
         // Выполняем непосредственно выгрузку на сервер нашего архива
         self

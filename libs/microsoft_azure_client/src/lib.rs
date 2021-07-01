@@ -2,7 +2,7 @@ mod request_builder;
 mod responses;
 mod token;
 mod client;
-mod submission;
+mod flight_submission;
 mod error;
 mod helpers;
 

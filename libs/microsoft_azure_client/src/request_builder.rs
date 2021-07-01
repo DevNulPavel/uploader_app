@@ -46,6 +46,7 @@ struct Base {
 #[derive(Debug, Clone)]
 pub struct RequestBuilder {
     base: Arc<Base>,
+    flight_id: CowArc<Option<String>>,
     submission_id: CowArc<Option<String>>,
     submission_command: CowArc<Option<String>>,
     path_segments: CowArc<Vec<String>>,
@@ -67,6 +68,7 @@ impl<'a> RequestBuilder {
                 application_id
             }),
             method: Default::default(),
+            flight_id: Default::default(),
             submission_id: Default::default(),
             submission_command: Default::default(),
             path_segments: Default::default()
@@ -83,6 +85,11 @@ impl<'a> RequestBuilder {
 
     pub fn method(mut self, method: Method) -> RequestBuilder {
         self.method = method;
+        self
+    }
+
+    pub fn flight_id(mut self, flight_id: String) -> RequestBuilder {
+        self.flight_id.set_val(Some(flight_id));
         self
     }
 
@@ -115,10 +122,16 @@ impl<'a> RequestBuilder {
             segments.push("my");
             segments.push("applications");
             segments.push(&self.base.application_id);
+            // Если есть flight id, добавляем
+            if let Some(flight_id) = self.flight_id.as_ref() {
+                segments.push("flights");
+                segments.push(&flight_id);
+            }
             // Если есть submission id, добавляем
             if let Some(submission_id) = self.submission_id.as_ref() {
                 segments.push("submissions");
                 segments.push(&submission_id);
+                // Команда сабмиссии
                 if let Some(submission_command) = self.submission_command.as_ref() {
                     segments.push(submission_command);
                 }

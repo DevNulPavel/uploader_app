@@ -24,12 +24,12 @@ export RUST_LOG=uploader_app=debug,google_drive_client=debug
 # target/debug/uploader_app "${UPLOAD_PARAMS[@]}"
 
 # Google drive
-UPLOAD_PARAMS=()
-UPLOAD_PARAMS+=(--google_drive_files "/Users/devnul/Downloads/airshipper-macos.tar.gz")
-UPLOAD_PARAMS+=(--google_drive_target_folder_id "1YtSfyiMp-MxF5AVWq_VnJxGtAwiMghBF")
-UPLOAD_PARAMS+=(--google_drive_target_subfolder_name "NewFolderTest")
-UPLOAD_PARAMS+=(--google_drive_target_owner_email 'devnulpavel@gmail.com')
-target/debug/uploader_app "${UPLOAD_PARAMS[@]}"
+# UPLOAD_PARAMS=()
+# UPLOAD_PARAMS+=(--google_drive_files "/Users/devnul/Downloads/airshipper-macos.tar.gz")
+# UPLOAD_PARAMS+=(--google_drive_target_folder_id "1YtSfyiMp-MxF5AVWq_VnJxGtAwiMghBF")
+# UPLOAD_PARAMS+=(--google_drive_target_subfolder_name "NewFolderTest")
+# UPLOAD_PARAMS+=(--google_drive_target_owner_email 'devnulpavel@gmail.com')
+# target/debug/uploader_app "${UPLOAD_PARAMS[@]}"
 
 # Google play
 # UPLOAD_PARAMS=()

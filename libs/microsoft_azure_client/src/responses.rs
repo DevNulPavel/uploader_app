@@ -39,10 +39,10 @@ fn deserealize_from_str<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 /// Тип ошибки, в который мы можем парсить наши данные
 #[derive(Deserialize, Debug)]
 pub struct ErrorResponseValue{
-    source: String,
-    message: String,
     code: String,
-    target: String,
+    message: String,
+    source: Option<String>,
+    target: Option<String>,
     // error: String,
     // error_description: String,
     // error_codes: Vec<u32>,
@@ -91,53 +91,12 @@ pub struct TokenResponse{
 
 //////////////////////////////////////////////////////////////////////
 
-/// Представляет из себя информацию о сабмите приложения в рамках информации о приложении
-/// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/get-app-data`
-#[derive(Deserialize, Debug)]
-pub struct ApplicationInfoSubmissionData{
-    pub id: String,
-
-    #[serde(rename = "resourceLocation")]
-    pub resource_location: String
-}
-
-/// Представляет из себя информацию о конкретном приложении
-/// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/get-app-data`
-#[derive(Deserialize, Debug)]
-pub struct ApplicationInfoResponse{
-    pub id: String,
-
-    #[serde(rename = "primaryName")]
-    pub primary_name: String,
-
-    #[serde(rename = "packageFamilyName")]
-    pub package_family_name: Option<String>,
-
-    #[serde(rename = "packageIdentityName")]
-    pub package_identity_name: String,
-
-    #[serde(rename = "publisherName")]
-    pub publisher_name: String,
-
-    #[serde(rename = "firstPublishedDate")]
-    pub first_publisher_date: String,
-
-    #[serde(rename = "lastPublishedApplicationSubmission")]
-    pub last_publisher_app_submission: Option<ApplicationInfoSubmissionData>,
-
-    #[serde(rename = "pendingApplicationSubmission")]
-    pub pending_app_submission: Option<ApplicationInfoSubmissionData>,
-
-    #[serde(rename = "hasAdvancedListingPermission")]
-    pub has_advanced_listing_perm: bool
-}
-
-//////////////////////////////////////////////////////////////////////
-
+/*
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubmissionCreateStatusDetailInfo {
-    code: String,
-    details: String,
+    pub code: String,
+    
+    pub details: String,
 
     #[serde(flatten)]
     pub other_fields: HashMap<String, Value>,
@@ -156,54 +115,53 @@ pub struct SubmissionCreateSertificationReport {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubmissionStatusDetails {
-    errors: Vec<SubmissionCreateStatusDetailInfo>,
-
-    warnings: Vec<SubmissionCreateStatusDetailInfo>,
+    pub errors: Vec<SubmissionCreateStatusDetailInfo>,
+    
+    pub warnings: Vec<SubmissionCreateStatusDetailInfo>,
 
     #[serde(rename = "certificationReports")]
-    certification_reports: Vec<SubmissionCreateSertificationReport>,
-
+    pub certification_reports: Vec<SubmissionCreateSertificationReport>,
+    
     #[serde(flatten)]
     pub other_fields: HashMap<String, Value>,
-}
+}*/
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct SubmissionCreateAppPackageInfo {
-    #[serde(rename = "fileName")]
-    pub file_name: String,
-
-    #[serde(rename = "fileStatus")]
-    pub file_status: String,
-
-    #[serde(rename = "minimumDirectXVersion")]
-    pub minimum_direct_x: String,
-
-    #[serde(rename = "minimumSystemRam")]
-    pub minimum_ram: String,
-
-    #[serde(flatten)]
-    pub other_fields: HashMap<String, Value>,
-}
+//////////////////////////////////////////////////////////////////////
 
 /// Данная структура представляет собой ответ после инициализации
-/// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#app-submission-object`
+/// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/create-a-flight`
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct SubmissionCreateResponse {
+pub struct FlightCreateResponse {
+    #[serde(rename = "flightId")]
+    pub flight_id: String,
+
+    #[serde(rename = "friendlyName")]
+    pub friendly_name: String,
+
+    #[serde(rename = "groupIds")]
+    pub group_ids: Vec<String>,
+
+    #[serde(rename = "rankHigherThan")]
+    pub rank_higher_than: String
+}
+
+//////////////////////////////////////////////////////////////////////
+
+/// Данная структура представляет собой ответ после инициализации flight сабмиссии
+/// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/create-a-flight-submission`
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct FlightSubmissionsCreateResponse {
+    #[serde(rename = "id")]
     pub id: String,
 
-    pub status: String, // TODO: ENUM
+    #[serde(rename = "flightId")]
+    pub flight_id: String,
 
-    #[serde(rename = "statusDetails")]
-    pub status_details: SubmissionStatusDetails,
+    // #[serde(rename = "statusDetails")]
+    // pub status_details: SubmissionStatusDetails,
 
     #[serde(rename = "fileUploadUrl")]
-    pub file_upload_url: String,
-
-    #[serde(rename = "applicationPackages")]
-    pub app_packages: Vec<SubmissionCreateAppPackageInfo>,
-
-    #[serde(flatten)]
-    pub other_fields: HashMap<String, Value>,
+    pub file_upload_url: String
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -211,7 +169,7 @@ pub struct SubmissionCreateResponse {
 /// Данная структура представляет собой ответ после инициализации
 /// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#app-submission-object`
 #[derive(Deserialize, Debug, Clone)]
-pub struct SubmissionCommitResponse {
+pub struct FlightSubmissionCommitResponse {
     pub status: String
 }
 
@@ -223,6 +181,6 @@ pub struct SubmissionCommitResponse {
 pub struct SubmissionStatusResponse {
     pub status: String,
 
-    #[serde(rename = "statusDetails")]
-    pub status_details: SubmissionStatusDetails
+    // #[serde(rename = "statusDetails")]
+    // pub status_details: SubmissionStatusDetails
 }

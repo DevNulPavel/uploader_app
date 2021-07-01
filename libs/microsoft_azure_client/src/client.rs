@@ -20,13 +20,8 @@ use crate::{
     error::{
         MicrosoftAzureError
     },
-    responses::{
-        DataOrErrorResponse,
-        ApplicationInfoResponse,
-        ApplicationInfoSubmissionData
-    },
-    submission::{
-        Submission
+    flight_submission::{
+        FlightSubmission
     }
 };
 
@@ -60,71 +55,16 @@ impl MicrosoftAzureClient {
         }
     }
 
-    /// Данный метод позволяет получить информацию по текущему приложению
-    #[instrument(skip(self))]
-    async fn get_application_info(&self) -> Result<ApplicationInfoResponse, MicrosoftAzureError>{
-        // https://docs.microsoft.com/en-us/windows/uwp/monetize/get-an-app
-        let response = self.request_builder
-            .clone()
-            .method(reqwest::Method::GET)
-            .build()
-            .await?
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<DataOrErrorResponse<ApplicationInfoResponse>>()
-            .await?
-            .into_result()?;
-
-        Ok(response)
-    }
-
-    /// Данный метод позволяет удалить ожидающий билд
-    #[instrument(skip(self, pending_info))]
-    async fn remove_pending_submission(&self, pending_info: ApplicationInfoSubmissionData) -> Result<(), MicrosoftAzureError>{
-        // https://docs.microsoft.com/en-us/windows/uwp/monetize/delete-an-app-submission
-
-        // Если вернулся валидный статус 200, значит все хорошо
-        self.request_builder
-            .clone()
-            .method(reqwest::Method::DELETE)
-            .submission_id(pending_info.id)
-            .build()
-            .await?
-            .send()
-            .await?
-            .error_for_status()?;
-
-        Ok(())
-    }
-
-    #[instrument(err, skip(self, zip_upload_file_path))]
+    #[instrument(skip(self, zip_upload_file_path))]
     pub async fn upload_production_build(&self, zip_upload_file_path: &Path) -> Result<(), MicrosoftAzureError> {
-        // https://docs.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions
+        // https://docs.microsoft.com/en-us/windows/uwp/monetize/manage-flights
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/python-code-examples-for-the-windows-store-submission-api
 
-        // Сначала запрашиваем информацию о текущем приложении
-        debug!("Microsoft Azure: request application info");
-        let current_app_info = self
-            .get_application_info()
-            .await?;
-        debug!(?current_app_info, "Microsoft Azure: current application info");
-
-        // Затем нужно проверить, нет ли у нас сейчас каких-то ожидающих сабмитов,
-        // если есть - выполняем удаление
-        if let Some(pending_info) = current_app_info.pending_app_submission {
-            debug!(?pending_info, "Microsoft Azure: remove current pending");
-            self
-                .remove_pending_submission(pending_info)
-                .await?;
-            debug!("Microsoft Azure: current pending removed");
-        }
-
         // Создаем новый Submission для данного приложения
-        debug!("Microsoft Azure: submission create try");
-        let mut submission = Submission::start_new(self.request_builder.clone())
+        debug!("Microsoft Azure: flight submission create try");
+        let submission = FlightSubmission::start_new(self.request_builder.clone())
             .await?;
-        debug!("Microsoft Azure: submission created");
+        debug!("Microsoft Azure: flight submission created");
 
         // Выполняем выгрузку файлика
         debug!("Microsoft Azure: File uploading start");

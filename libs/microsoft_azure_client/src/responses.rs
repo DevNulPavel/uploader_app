@@ -91,7 +91,6 @@ pub struct TokenResponse{
 
 //////////////////////////////////////////////////////////////////////
 
-/*
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubmissionCreateStatusDetailInfo {
     pub code: String,
@@ -124,7 +123,7 @@ pub struct SubmissionStatusDetails {
     
     #[serde(flatten)]
     pub other_fields: HashMap<String, Value>,
-}*/
+}
 
 //////////////////////////////////////////////////////////////////////
 
@@ -157,8 +156,8 @@ pub struct FlightSubmissionsCreateResponse {
     #[serde(rename = "flightId")]
     pub flight_id: String,
 
-    // #[serde(rename = "statusDetails")]
-    // pub status_details: SubmissionStatusDetails,
+    #[serde(rename = "statusDetails")]
+    pub status_details: SubmissionStatusDetails,
 
     #[serde(rename = "fileUploadUrl")]
     pub file_upload_url: String
@@ -176,7 +175,7 @@ pub struct FlightSubmissionCommitResponse {
 //////////////////////////////////////////////////////////////////////
 
 /// Данная структура представляет собой ответ получения статуса после коммита
-/// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/get-status-for-an-app-submission`
+/// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/get-status-for-a-flight-submission`
 #[derive(Deserialize, Debug, Clone)]
 pub struct SubmissionStatusResponse {
     pub status: String,

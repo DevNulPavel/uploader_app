@@ -146,6 +146,41 @@ pub struct FlightCreateResponse {
 
 //////////////////////////////////////////////////////////////////////
 
+/// Данная структура представляет собой информацию о конретном flight
+/// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/get-a-flight`
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct FlightInfoSubmission {
+    pub id: String,
+
+    #[serde(rename = "resourceLocation")]
+    pub resource_location: String
+}
+
+/// Данная структура представляет собой информацию о конретном flight
+/// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/get-a-flight`
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct FlightInfoResponse {
+    #[serde(rename = "flightId")]
+    pub flight_id: String,
+
+    #[serde(rename = "friendlyName")]
+    pub friendly_name: String,
+
+    #[serde(rename = "lastPublishedFlightSubmission")]
+    pub last_published_flight_submission: Option<FlightInfoSubmission>,
+
+    #[serde(rename = "pendingFlightSubmission")]
+    pub pending_flight_submission: Option<FlightInfoSubmission>,
+
+    #[serde(rename = "groupIds")]
+    pub group_ids: Vec<String>,
+
+    #[serde(rename = "rankHigherThan")]
+    pub rank_higher_than: String
+}
+
+//////////////////////////////////////////////////////////////////////
+
 /// Данная структура представляет собой ответ после инициализации flight сабмиссии
 /// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/create-a-flight-submission`
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -180,6 +215,6 @@ pub struct FlightSubmissionCommitResponse {
 pub struct SubmissionStatusResponse {
     pub status: String,
 
-    // #[serde(rename = "statusDetails")]
-    // pub status_details: SubmissionStatusDetails
+    #[serde(rename = "statusDetails")]
+    pub status_details: Option<SubmissionStatusDetails>
 }

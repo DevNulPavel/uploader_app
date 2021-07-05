@@ -26,6 +26,7 @@ use tokio::{
         AsyncReadExt
     }
 };
+use tracing_error::SpanTrace;
 // use tokio_util::{
 //     codec::{
 //         BytesCodec,
@@ -57,7 +58,9 @@ use crate::{
         FlightCreateResponse,
         FlightSubmissionsCreateResponse,
         FlightSubmissionCommitResponse,
-        SubmissionStatusResponse
+        SubmissionStatusResponse,
+        FlightInfoResponse,
+        ErrorResponseValue
     }
 };
 
@@ -80,7 +83,6 @@ impl FlightSubmission {
             .join_path("flights".to_owned())
             .build()
             .await?
-            // .header(reqwest::header::CONTENT_LENGTH, "0")
             .json(&json!({
                 "friendlyName": "API flight",
                 "groupIds": [
@@ -100,21 +102,68 @@ impl FlightSubmission {
             .clone()
             .flight_id(info.flight_id.clone());
 
-        // Создаем новую flight submission
+        // Получим информацию для данного flightId
         let info = request_builder
             .clone()
-            .method(reqwest::Method::POST)
-            .join_path("submissions".to_owned())
+            .method(reqwest::Method::GET)
             .build()
             .await?
-            .header(reqwest::header::CONTENT_LENGTH, "0")
             .send()
             .await?
-            .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
+            .json::<DataOrErrorResponse<FlightInfoResponse>>()
             .await?
             .into_result()?;
-        debug!("Microsoft Azure, new flight submission response: {:#?}", info);        
-        
+        debug!("Microsoft Azure, flight info: {:#?}", info);
+
+        // Если есть какие-то ожидающие сабмиссии
+        let info = if let Some(pending) = info.pending_flight_submission{
+            // Удаляем сабмиссии
+            /*let resp = request_builder
+                .clone()
+                .submission_id(pending.id)
+                .method(reqwest::Method::DELETE)
+                .build()
+                .await?
+                .send()
+                .await?;
+            if !resp.status().is_success() {
+                let err = resp.json::<ErrorResponseValue>().await?;
+                return Err(MicrosoftAzureError::RestApiResponseError(SpanTrace::capture(), err));
+            }
+            debug!("Microsoft Azure, flight submission delete success");*/
+
+            // Данные по имеющейся сабмиссии
+            let info = request_builder
+                .clone()
+                .submission_id(pending.id)
+                .method(reqwest::Method::GET)
+                .build()
+                .await?
+                .send()
+                .await?
+                .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
+                .await?
+                .into_result()?;
+            debug!("Microsoft Azure, received active flight submission response: {:#?}", info); 
+            info
+        }else{
+            // Создаем новую flight submission
+            let info = request_builder
+                .clone()
+                .method(reqwest::Method::POST)
+                .join_path("submissions".to_owned())
+                .build()
+                .await?
+                .header(reqwest::header::CONTENT_LENGTH, 0)
+                .send()
+                .await?
+                .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
+                .await?
+                .into_result()?;
+            debug!("Microsoft Azure, new flight submission response: {:#?}", info);        
+            info
+        };
+
         // Создаем новый реквест билдер на основании старого, но уже с полученным submission id 
         let request_builder = request_builder
             .clone()
@@ -312,7 +361,7 @@ impl FlightSubmission {
         }
 
         // Проверяем расширение данного файлика
-        if check_file_extention(zip_file_path, ".zip") == false{
+        if check_file_extention(zip_file_path, "zip") == false{
             return Err(MicrosoftAzureError::InvalidUploadFileExtention);
         }
 

@@ -365,20 +365,19 @@ impl FlightSubmission {
             return Err(MicrosoftAzureError::InvalidUploadFileExtention);
         }
 
-        // Открываем zip файлик и получаем имя .appx / .appxupload там
-        {
+        // Открываем zip файлик и получаем имя .appx там
+        let filename = {
             let zip = zip::ZipArchive::new(std::fs::File::open(zip_file_path)?)?;
-            let contains_file = zip
+            let filename = zip
                 .file_names()
-                .any(|full_path_str|{
+                .find(|full_path_str|{
                     let file_name = std::path::Path::new(full_path_str)
                         .file_name()
                         .and_then(|f|{
                             f.to_str()
                         });
                     if let Some(file_name) = file_name {
-                        if !file_name.starts_with(".") &&
-                            (file_name.ends_with(".appx") || file_name.ends_with(".appxupload")){
+                        if !file_name.starts_with(".") && file_name.ends_with(".appx"){
                             true
                         }else{
                             false
@@ -386,11 +385,36 @@ impl FlightSubmission {
                     }else{
                         false
                     }
-                });
-            if !contains_file {
-               return Err(MicrosoftAzureError::NoAppxFileInZip); 
-            }
+                })
+                .ok_or(MicrosoftAzureError::NoAppxFileInZip)?;
+            debug!("Microsoft Azure: filename in zip {}", filename);
+            filename.to_owned() // TODO: не аллоцировать
         };
+
+        // Обновляем имя пакета
+        let update_response = self
+            .request_builder
+            .clone()
+            .method(reqwest::Method::PUT)
+            .build()
+            .await?
+            .json(&json!({
+                "flightPackages": [
+                    {
+                      "fileName": filename,
+                      "fileStatus": "PendingUpload",
+                      "minimumDirectXVersion": "None",
+                      "minimumSystemRam": "None"
+                    }
+                ],
+                "targetPublishMode": "Manual",
+            }))
+            .send()
+            .await?
+            .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
+            .await?
+            .into_result()?;
+        debug!("Microsoft Azure: update response {:#?}", update_response);
 
         // Выполняем непосредственно выгрузку на сервер нашего архива
         self

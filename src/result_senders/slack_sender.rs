@@ -305,14 +305,17 @@ impl ResultSender for SlackResultSender {
 
             // В канал
             if let Some(channel) = &sender.channel {
-                let qr_data_future = qr_data_future.clone();
-                let fut = async move {
-                    let target = SlackChannelMessageTarget::new(&channel);
-                    message_to_channel_target(sender, qr_data_future, target, message)
-                        .await;
-                };
+                // Если имя канала оканчивается на "[ERRORS_ONLY]" - пишем лишь ошибки туда
+                if !channel.ends_with("[ERRORS_ONLY]") {
+                    let qr_data_future = qr_data_future.clone();
+                    let fut = async move {
+                        let target = SlackChannelMessageTarget::new(&channel);
+                        message_to_channel_target(sender, qr_data_future, target, message)
+                            .await;
+                    };
 
-                futures_vec.push(fut.boxed());
+                    futures_vec.push(fut.boxed());
+                }
             }
             
             // Юзеру
@@ -365,7 +368,8 @@ impl ResultSender for SlackResultSender {
 
             // Пишем в канал
             if let Some(channel) = &sender.channel{
-                let target = SlackChannelMessageTarget::new(&channel);
+                // Убираем текст "[ERRORS_ONLY]" из имени канала
+                let target = SlackChannelMessageTarget::new(channel.strip_suffix("[ERRORS_ONLY]").unwrap_or(&channel));
                 let fut = sender.client.send_message(&message, target).boxed();
                 futures_vec.push(fut);
             }

@@ -162,10 +162,16 @@ struct QRInfo{
     qr_data: Vec<u8>
 }
 
+enum ChannelType{
+    All(String),
+    ErrorsOnly(String),
+    None
+}
+
 struct SenderResolved{
     client: SlackClient,
     text_prefix: Option<String>,
-    channel: Option<String>,
+    channel: ChannelType,
     user_id: Option<String>
 }
 
@@ -244,10 +250,23 @@ impl SlackResultSender {
                 }
             };
 
+            let channel = match params.channel{
+                Some(channel) => {
+                    // Если имя канала заканчивается на "[ERRORS_ONLY]" - то канал лишь для ошибок
+                    match channel.strip_suffix("[ERRORS_ONLY]") {
+                        Some(real_channel) => ChannelType::ErrorsOnly(real_channel.to_owned()),
+                        None => ChannelType::All(channel)
+                    }
+                },
+                None => {
+                    ChannelType::None
+                }
+            };
+
             SenderResolved{
                 client,
                 text_prefix: params.text_prefix,
-                channel: params.channel,
+                channel: channel,
                 user_id
             }
         });
@@ -304,18 +323,15 @@ impl ResultSender for SlackResultSender {
             let qr_data_future = qr_data_future.shared();
 
             // В канал
-            if let Some(channel) = &sender.channel {
-                // Если имя канала оканчивается на "[ERRORS_ONLY]" - пишем лишь ошибки туда
-                if !channel.ends_with("[ERRORS_ONLY]") {
-                    let qr_data_future = qr_data_future.clone();
-                    let fut = async move {
-                        let target = SlackChannelMessageTarget::new(&channel);
-                        message_to_channel_target(sender, qr_data_future, target, message)
-                            .await;
-                    };
+            if let ChannelType::All(channel) = &sender.channel {
+                let qr_data_future = qr_data_future.clone();
+                let fut = async move {
+                    let target = SlackChannelMessageTarget::new(channel);
+                    message_to_channel_target(sender, qr_data_future, target, message)
+                        .await;
+                };
 
-                    futures_vec.push(fut.boxed());
-                }
+                futures_vec.push(fut.boxed());
             }
             
             // Юзеру
@@ -339,7 +355,7 @@ impl ResultSender for SlackResultSender {
                 // let QRInfo { url, qr_data } = qr_info.deref();
 
                 // В канал
-                if let Some(channel) = &sender.channel {
+                if let ChannelType::All(channel) = &sender.channel {
                     let target = SlackChannelImageTarget::new(&channel);
                     let fut = sender.client.send_image(qr_info.qr_data.clone(), None, target);
                     futures_vec.push(fut.boxed());
@@ -367,11 +383,14 @@ impl ResultSender for SlackResultSender {
             let mut futures_vec = Vec::new();
 
             // Пишем в канал
-            if let Some(channel) = &sender.channel{
-                // Убираем текст "[ERRORS_ONLY]" из имени канала
-                let target = SlackChannelMessageTarget::new(channel.strip_suffix("[ERRORS_ONLY]").unwrap_or(&channel));
-                let fut = sender.client.send_message(&message, target).boxed();
-                futures_vec.push(fut);
+            match &sender.channel{
+                ChannelType::All(channel) | ChannelType::ErrorsOnly(channel) => {
+                    let target = SlackChannelMessageTarget::new(channel);
+                    let fut = sender.client.send_message(&message, target).boxed();
+                    futures_vec.push(fut);
+                }
+                &ChannelType::None => {
+                }
             }
             
             // Пишем пользователю

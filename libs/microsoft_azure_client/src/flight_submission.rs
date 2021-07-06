@@ -27,19 +27,19 @@ use tokio::{
     }
 };
 use tracing_error::SpanTrace;
-// use tokio_util::{
-//     codec::{
-//         BytesCodec,
-//         FramedRead
-//     }
-// };
-// use reqwest::{
-    // Body,
-    // multipart::{
-        // Form,
-        // Part
-    // }
-// };
+use tokio_util::{
+    codec::{
+        BytesCodec,
+        FramedRead
+    }
+};
+use reqwest::{
+    Body,
+    multipart::{
+        Form,
+        Part
+    }
+};
 // use serde_json::{
 //     json
 // };
@@ -361,7 +361,7 @@ impl FlightSubmission {
         }
 
         // Проверяем расширение данного файлика
-        if check_file_extention(zip_file_path, "zip") == false{
+        /*if check_file_extention(zip_file_path, "zip") == false{
             return Err(MicrosoftAzureError::InvalidUploadFileExtention);
         }
 
@@ -389,7 +389,9 @@ impl FlightSubmission {
                 .ok_or(MicrosoftAzureError::NoAppxFileInZip)?;
             debug!("Microsoft Azure: filename in zip {}", filename);
             filename.to_owned() // TODO: не аллоцировать
-        };
+        };*/
+
+        let filename = zip_file_path.file_name().and_then(|n| n.to_str()).unwrap();
 
         // Обновляем имя пакета
         let update_response = self
@@ -403,11 +405,12 @@ impl FlightSubmission {
                     {
                       "fileName": filename,
                       "fileStatus": "PendingUpload",
-                      "minimumDirectXVersion": "None",
-                      "minimumSystemRam": "None"
+                    //   "minimumDirectXVersion": "None",
+                    //   "minimumSystemRam": "None"
                     }
                 ],
-                "targetPublishMode": "Manual",
+                "targetPublishMode": "Immediate",
+                "notesForCertification": "No special steps are required for certification of this app."
             }))
             .send()
             .await?

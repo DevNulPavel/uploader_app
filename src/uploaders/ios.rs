@@ -99,6 +99,9 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
             "-u", &env_params.user,
             "-p", &env_params.pass
         ])
+        .stderr(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stdin(std::process::Stdio::null())
         .spawn()
         .map_err(|err| {
             IOSError::SpawnFailed(err)

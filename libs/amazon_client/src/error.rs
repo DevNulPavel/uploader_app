@@ -15,6 +15,11 @@ use reqwest::{
 use url::{
     ParseError
 };
+use crate::{
+    responses::{
+        ErrorResponseValue
+    }
+};
 
 #[derive(Debug)]
 pub enum AmazonError{
@@ -34,6 +39,7 @@ pub enum AmazonError{
     ApkListFailedWithCode(StatusCode),
     ApkDeleteFailedWithCode(StatusCode),
     UploadingFailedWithCode(StatusCode),
+    ApiError(ErrorResponseValue),
     Custom(String),
 }
 
@@ -55,6 +61,11 @@ impl From<reqwest::Error> for AmazonError {
 impl From<serde_json::Error> for AmazonError {
     fn from(err: serde_json::Error) -> AmazonError {
         AmazonError::JsonParseErr(err)
+    }
+}
+impl From<ErrorResponseValue> for AmazonError {
+    fn from(err: ErrorResponseValue) -> AmazonError {
+        AmazonError::ApiError(err)
     }
 }
 

@@ -99,10 +99,11 @@ impl<'a> AppEdit<'a> {
 
             if let Ok(response) = previous_edit_request
                 .await?
-                .inspect_json::<AmazonEditRespone, AmazonError>(|data|{
+                .inspect_json::<DataOrErrorResponse<AmazonEditRespone>, AmazonError>(|data|{
                     debug!("{}", data);
                 })
-                .await {
+                .await?
+                .into_result() {
                 debug!("Previous edit received: {:#?}", response);
                 response
             }else if let Ok(response) = new_edit_request.await?.json::<AmazonEditRespone>().await {
@@ -128,10 +129,11 @@ impl<'a> AppEdit<'a> {
 
         if resp.status() == http::StatusCode::OK {
             let values = resp
-                .inspect_json::<Vec<ApkInfoResponse>, AmazonError>(|data|{
+                .inspect_json::<DataOrErrorResponse<Vec<ApkInfoResponse>>, AmazonError>(|data|{
                     debug!("{}", data);
                 })
-                .await?;
+                .await?
+                .into_result()?;
             Ok(Some(values))
         } else if resp.status() == http::StatusCode::NO_CONTENT {
             Ok(None)
@@ -232,10 +234,11 @@ impl<'a> AppEdit<'a> {
             .body(body)
             .send()
             .await?
-            .inspect_json::<ApkInfoResponse, AmazonError>(|data|{
+            .inspect_json::<DataOrErrorResponse<ApkInfoResponse>, AmazonError>(|data|{
                 debug!("{}", data);
             })
-            .await?;
+            .await?
+            .into_result()?;
 
         debug!("Uploading finished: {:#?}", response);
 

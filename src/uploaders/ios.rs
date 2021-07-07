@@ -100,7 +100,7 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
             "-p", &env_params.pass
         ])
         .stderr(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
         .stdin(std::process::Stdio::null())
         .spawn()
         .map_err(|err| {
@@ -116,18 +116,13 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
 
     // Проверим ошибку
     if child.status.code() != Some(0) {
-        let output = String::from_utf8(child.stdout)
-            .map_err(|err|{
-                IOSError::ErrorParseFailed(err)
-            })?;
         let err = String::from_utf8(child.stderr)
             .map_err(|err|{
                 IOSError::ErrorParseFailed(err)
             })?;
         let error_text = format!(
-            "Spawn failed with code {:?}\nStdOut: '{}'\nStdError: '{}'", 
+            "Spawn failed with code {:?}, stderr: '{}'", 
             child.status.code(),
-            output, 
             err
         );
 

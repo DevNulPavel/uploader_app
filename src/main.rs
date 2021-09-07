@@ -259,6 +259,8 @@ fn setup_logs() {
                 .add_directive(tracing::Level::INFO.into())
         });
     let env_print_layer = tracing_subscriber::fmt::layer()
+        .compact()
+        .with_ansi(true)
         .with_writer(std::io::stdout);
     let env_layer = env_filter_layer
         .and_then(env_print_layer);

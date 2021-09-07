@@ -10,8 +10,8 @@ source env/test_environment.env
 
 # Rust environment setup
 export RUST_BACKTRACE=1
-# export RUST_LOG=trace
-export RUST_LOG=uploader_app=debug,google_drive_client=debug
+export RUST_LOG=debug
+# export RUST_LOG=uploader_app=debug,google_drive_client=debug
 # export RUST_LOG=uploader_app=trace,app_center_client=trace,google_drive_client=trace,reqwest=trace
 
 # App center

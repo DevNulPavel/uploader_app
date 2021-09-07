@@ -15,9 +15,16 @@ pub struct AmazonTokenResponse{
 }
 
 #[derive(Deserialize, Debug)]
-pub struct AmazonEditRespone{
+pub struct AmazonEditData{
     pub id: String,
     pub status: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum AmazonEditRespone{
+    Exists(AmazonEditData),
+    Empty{}
 }
 
 // https://developer.amazon.com/docs/app-submission-api/appsubapi-endpoints.html#/Edits.apks/get_2
@@ -28,12 +35,6 @@ pub struct ApkInfoResponse{
     pub name: String
 }
 
-// #[derive(Deserialize, Debug)]
-// #[serde(untagged)]
-// pub enum AmazonEditResponeDebug{
-//     Ok(AmazonEditRespone),
-//     Err(HashMap<String, Value>)
-// }
 
 // #[serde(rename = "versionCode")]
 

@@ -30,7 +30,7 @@ use tokio_util::{
 };
 use tracing::{
     debug,
-    // error
+    error
 };
 use super::{
     error::{
@@ -80,37 +80,37 @@ impl<'a> AppEdit<'a> {
 
         // Получаем незавершенное редактирование или стартуем новое
         let edit_info = {
-            let previous_edit_request = request_builder
+            // Пытаемся получить прошлое редактирование
+            let previous_edit = request_builder
                 .build_request(Method::GET, "edits")?
-                .send();
-            let new_edit_request = request_builder
-                .build_request(Method::POST, "edits")?
-                .send();
-            
-            // TEST
-            // let previous_text = previous_edit_request.await?.text().await?;
-            // debug!("Prev: {}", previous_text);
-            // return Err(AmazonError::StartEditFailed);
-
-            // TEST
-            // let new_text = new_edit_request.await?.text().await?;
-            // debug!("Prev: {}", new_text);
-            // return Err(AmazonError::StartEditFailed);
-
-            if let Ok(response) = previous_edit_request
+                .send()
                 .await?
                 .inspect_json::<DataOrErrorResponse<AmazonEditRespone>, AmazonError>(|data|{
-                    debug!("{}", data);
+                    debug!("Previous edit data: {}", data);
                 })
                 .await?
-                .into_result() {
-                debug!("Previous edit received: {:#?}", response);
-                response
-            }else if let Ok(response) = new_edit_request.await?.json::<AmazonEditRespone>().await {
-                debug!("New edit created: {:#?}", response);
-                response
-            }else{
-                return Err(AmazonError::StartEditFailed);
+                .into_result()?;
+
+            // Пустой ли ответ?
+            match previous_edit{
+                AmazonEditRespone::Exists(previous_edit_data) => {
+                    debug!("Previous edit received: {:#?}", previous_edit_data);
+                    previous_edit_data
+                },
+                AmazonEditRespone::Empty{} => {
+                    // Создаем новое редактирование, пустые данные не ожидаем
+                    let new_edit = request_builder
+                        .build_request(Method::POST, "edits")?
+                        .send()
+                        .await?
+                        .inspect_json::<DataOrErrorResponse<AmazonEditData>, AmazonError>(|data|{
+                            debug!("New edit data: {}", data);
+                        })
+                        .await?
+                        .into_result()?;
+                    debug!("New edit received: {:#?}", new_edit);
+                    new_edit
+                }
             }
         };
 
@@ -168,6 +168,7 @@ impl<'a> AppEdit<'a> {
         debug!("Try to deleted: {:#?}", info);
 
         let etag = self.get_etag_for_apk(info).await?;
+        debug!("ETag received: {:#?}", etag);
 
         let resp = self.request_builder
             .build_request(Method::DELETE, &format!("apks/{}", info.id))?
@@ -175,9 +176,19 @@ impl<'a> AppEdit<'a> {
             .send()
             .await?;
         if resp.status() == 204 {
+            debug!("Delete success: {:#?}", resp);
             Ok(info)
         }else{
-            Err(AmazonError::ApkDeleteFailedWithCode(resp.status()))
+            let responce_status = resp.status();
+            match resp.json::<ErrorResponseValue>().await{
+                Ok(api_err) => {
+                    error!("Delete failed: code={}, err={:?}", responce_status, api_err);
+                },
+                Err(_) => {
+                    error!("Delete failed: code={}", responce_status);
+                }
+            }
+            Err(AmazonError::ApkDeleteFailedWithCode(responce_status))
         }
     }
 

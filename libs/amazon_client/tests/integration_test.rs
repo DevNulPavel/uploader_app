@@ -63,7 +63,7 @@ async fn library_integration_test(){
     
     debug!("Token: {:#?}", token_str);
 
-    let file_path = Path::new("/Users/devnul/Downloads/Island2-arm32-amazon-12.14.7-401-07072021_1257-060b2d4b.apk");
+    let file_path = Path::new("/Users/devnul/Downloads/Island2-arm32-amazon-12.16.5-413-06092021_1919-6d8422f5.apk");
 
     let client = AmazonClient::new(http_client, token);
     let task = AmazonUploadTask{

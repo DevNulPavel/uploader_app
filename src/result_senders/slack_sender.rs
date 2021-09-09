@@ -1,80 +1,40 @@
-use std::{
-    error::{
-        Error
-    },
-    path::{
-        PathBuf
-    },
-    borrow::{
-        Cow
-    },
-    pin::{
-        Pin
-    }
-};
-use tracing::{
-    error
-};
-use reqwest::{
-    Client
-};
-use tokio::{
-    task::{
-        JoinHandle,
-        spawn_blocking
-        // spawn_local
-    },
-    join,
-    spawn,
-};
-use futures::{
-    future::{
-        join_all,
-        select,
-        Either,
-        Future,
-        FutureExt
-    },
-    // select
-};
-use async_trait::{
-    async_trait
-};
+use super::{qr::create_qr_data, ResultSender};
+use crate::{env_parameters::ResultSlackEnvironment, uploaders::UploadResultData};
+use async_trait::async_trait;
+use futures::future::{join_all, Future, FutureExt};
+use reqwest::Client;
 use slack_client_lib::{
-    SlackClient,
+    SlackChannelImageTarget,
     SlackChannelMessageTarget,
-    SlackUserMessageTarget,
+    SlackClient,
     SlackThreadImageTarget,
     SlackUserImageTarget,
-    SlackChannelImageTarget,
+    SlackUserMessageTarget,
     // UsersCache,
     // UsersJsonCache,
-    UsersSqliteCache
+    UsersSqliteCache,
 };
-use crate::{
-    uploaders::{
-        UploadResultData
+use std::{borrow::Cow, error::Error, path::PathBuf, pin::Pin};
+use tokio::{
+    join, spawn,
+    task::{
+        spawn_blocking, // spawn_local
+        JoinHandle,
     },
-    env_parameters::{
-        ResultSlackEnvironment
-    }
 };
-use super::{
-    ResultSender, 
-    qr::{
-        create_qr_data
-    }
-};
+use tracing::error;
 
-fn qr_future_for_result(install_url: Option<String>) -> Pin<Box<dyn Future<Output=Option<QRInfo>> + Send>>{
-    let qr_data_future = match install_url{
+fn qr_future_for_result(
+    install_url: Option<String>,
+) -> Pin<Box<dyn Future<Output = Option<QRInfo>> + Send>> {
+    let qr_data_future = match install_url {
         Some(url) => {
             let fut = async move {
                 let qr_data = url.clone();
-                let res: Option<QRInfo> = spawn_blocking(move || { create_qr_data(&qr_data).ok() })
+                let res: Option<QRInfo> = spawn_blocking(move || create_qr_data(&qr_data).ok())
                     .await
                     .expect("QR code create spawn failed")
-                    .map(|qr_data|{
+                    .map(|qr_data| {
                         /*let inner = Arc::new(QRInfoInner{
                             url: url,
                             qr_data
@@ -82,29 +42,24 @@ fn qr_future_for_result(install_url: Option<String>) -> Pin<Box<dyn Future<Outpu
                         QRInfo{
                             inner
                         }*/
-                        QRInfo{
-                            url: url,
-                            qr_data
-                        }
+                        QRInfo { url: url, qr_data }
                     });
                 res
             };
             fut.boxed()
         }
-        None => {
-            futures::future::ready(Option::None).boxed()
-        }
+        None => futures::future::ready(Option::None).boxed(),
     };
     qr_data_future
 }
 
 macro_rules! message_target_impl {
     ($fn_name:ident, $target_type:ident$(<$life:lifetime>)?) => {
-        async fn $fn_name <'a, Q: Future<Output=Option<QRInfo>>>(sender: &SenderResolved, 
-                                                              qr_data_future: Q, 
-                                                              target: $target_type$(<$life>)?, 
+        async fn $fn_name <'a, Q: Future<Output=Option<QRInfo>>>(sender: &SenderResolved,
+                                                              qr_data_future: Q,
+                                                              target: $target_type$(<$life>)?,
                                                               text: &str) {
-        
+
             let (message_result, qr) = join!(
                 async{
                     sender
@@ -116,7 +71,7 @@ macro_rules! message_target_impl {
                 },
                 qr_data_future
             );
-        
+
             match (message_result, qr) {
                 (Some(message), Some(qr)) => {
                     let target = SlackThreadImageTarget::new(
@@ -126,26 +81,24 @@ macro_rules! message_target_impl {
                     let image_res = sender
                         .client
                         .send_image(
-                            qr.qr_data, 
-                            None, 
+                            qr.qr_data,
+                            None,
                             target
                         )
                         .await;
-            
+
                     if let Err(err) = image_res {
-                        error!("Slack image uploading failed with err: {}", err);    
+                        error!("Slack image uploading failed with err: {}", err);
                     }
                 },
                 _ => {
                 }
             }
-        }  
+        }
     };
 }
 message_target_impl!(message_to_channel_target, SlackChannelMessageTarget<'a>);
 message_target_impl!(message_to_user_target, SlackUserMessageTarget<'a>);
-
-
 
 // QR код
 /*struct QRInfoInner{
@@ -157,131 +110,114 @@ struct QRInfo{
     inner: Arc<QRInfoInner>,
 }*/
 #[derive(Clone)]
-struct QRInfo{
+struct QRInfo {
     url: String,
-    qr_data: Vec<u8>
+    qr_data: Vec<u8>,
 }
 
-enum ChannelType{
+enum ChannelType {
     All(String),
     ErrorsOnly(String),
-    None
+    None,
 }
 
-struct SenderResolved{
+struct SenderResolved {
     client: SlackClient,
     text_prefix: Option<String>,
     channel: ChannelType,
-    user_id: Option<String>
+    user_id: Option<String>,
 }
 
-enum ResultSenderState{
+enum ResultSenderState {
     Pending(JoinHandle<SenderResolved>),
-    Resolved(SenderResolved)
+    Resolved(SenderResolved),
 }
 
-pub struct SlackResultSender{
-    inner: ResultSenderState
+pub struct SlackResultSender {
+    inner: ResultSenderState,
 }
 impl SlackResultSender {
-    pub fn new(http_client: Client, params: ResultSlackEnvironment) -> SlackResultSender{
-        let join = spawn(async move{
+    pub fn new(http_client: Client, params: ResultSlackEnvironment) -> SlackResultSender {
+        let join = spawn(async move {
             let client = SlackClient::new(http_client, params.token.clone()); // TODO: Убрать клонирование
             let client_ref = &client;
 
-            let email_future = params
-                .user_email
-                .as_ref()
-                .map(|email|{
-                    client_ref.find_user_id_by_email(&email)
-                })
-                .map(|fut|{
-                    fut.boxed()
-                });
+            // Локальная функция для упрощения
+            async fn find_user_by_name(client_ref: &SlackClient, name: &str) -> Option<String> {
+                // Json cache
+                /*let cache_file_path = PathBuf::new()
+                    .join(dirs::home_dir().unwrap())
+                    .join(".cache/uploader_app/users_cache.json");
+                let cache = Some(UsersJsonCache::new(cache_file_path).await);*/
 
-            let name_future = params
-                .user_name
-                .as_ref()
-                .map(|name| async move {
-                    // Json cache
-                    /*let cache_file_path = PathBuf::new()
-                        .join(dirs::home_dir().unwrap())
-                        .join(".cache/uploader_app/users_cache.json");
-                    let cache = Some(UsersJsonCache::new(cache_file_path).await);*/
+                // Sqlite cache
+                let cache_file_path = PathBuf::new()
+                    .join(dirs::home_dir().unwrap())
+                    .join(".cache/uploader_app/users_cache.sqlite");
+                let cache: Option<UsersSqliteCache> =
+                    UsersSqliteCache::new(cache_file_path).await.ok();
 
-                    // Sqlite cache
-                    let cache_file_path = PathBuf::new()
-                        .join(dirs::home_dir().unwrap())
-                        .join(".cache/uploader_app/users_cache.sqlite");
-                    let cache: Option<UsersSqliteCache> = UsersSqliteCache::new(cache_file_path)
-                        .await
-                        .ok();
+                // TODO: Как-то сконвертировать в тип сразу?
+                match cache {
+                    Some(cache) => client_ref.find_user_id_by_name(name, Some(&cache)).await,
+                    None => client_ref.find_user_id_by_name(name, None).await,
+                }
+            }
 
-                    // TODO: Как-то сконвертировать в тип сразу?
-                    match cache {
-                        Some(cache) => {
-                            client_ref.find_user_id_by_name(&name, Some(&cache)).await
-                        },
+            // Пытаемся найти user_id по email или/и имени
+            let user_id: Option<String> = match (params.user_email, params.user_name) {
+                (Some(email), Some(name)) => {
+                    // Сначала ищем по email
+                    match client_ref.find_user_id_by_email(&email).await {
+                        user_id @ Some(_) => user_id,
                         None => {
-                            client_ref.find_user_id_by_name(&name, None).await
+                            // Если нету - тогда по имени
+                            find_user_by_name(client_ref, &name).await
                         }
                     }
-                })
-                .map(|fut|{
-                    fut.boxed()
-                });
-
-            let user_id: Option<String> = match (email_future, name_future){
-                (Some(email_future), Some(name_future)) => {
-                    let id: Option<String> = match select(name_future, email_future).await {
-                        Either::Left((id, _)) => id,
-                        Either::Right((id, _)) => id,
-                    };
-                    id
-                },
-                (None, Some(name_future)) => {
-                    name_future.await
-                },
-                (Some(email_future), None) => {
-                    email_future.await
-                },
-                (None, None) => {
-                    None
                 }
+                (None, Some(name)) => {
+                    // Поиск по имени
+                    find_user_by_name(client_ref, &name).await
+                }
+                (Some(email), None) => {
+                    // Поиск по email
+                    client_ref.find_user_id_by_email(&email).await
+                }
+                (None, None) => None,
             };
 
-            let channel = match params.channel{
+            // Канал для отправки?
+            let channel = match params.channel {
                 Some(channel) => {
                     // Если имя канала заканчивается на "[ERRORS_ONLY]" - то канал лишь для ошибок
                     match channel.strip_suffix("[ERRORS_ONLY]") {
                         Some(real_channel) => ChannelType::ErrorsOnly(real_channel.to_owned()),
-                        None => ChannelType::All(channel)
+                        None => ChannelType::All(channel),
                     }
-                },
-                None => {
-                    ChannelType::None
                 }
+                None => ChannelType::None,
             };
 
-            SenderResolved{
+            SenderResolved {
                 client,
                 text_prefix: params.text_prefix,
                 channel: channel,
-                user_id
+                user_id,
             }
         });
-        SlackResultSender{
-            inner: ResultSenderState::Pending(join)
+        SlackResultSender {
+            inner: ResultSenderState::Pending(join),
         }
     }
-    
+
     async fn resolve_sender(&mut self) -> &SenderResolved {
         let sender = loop {
             match self.inner {
                 ResultSenderState::Pending(ref mut join) => {
                     let resolved = join.await.expect("Slack sender resolve failed");
                     self.inner = ResultSenderState::Resolved(resolved);
-                },
+                }
                 ResultSenderState::Resolved(ref sender) => {
                     break sender;
                 }
@@ -292,7 +228,7 @@ impl SlackResultSender {
 }
 #[async_trait(?Send)]
 impl ResultSender for SlackResultSender {
-    async fn send_result(&mut self, result: &UploadResultData){
+    async fn send_result(&mut self, result: &UploadResultData) {
         let sender = self.resolve_sender().await;
 
         // Собираем текст в кучу
@@ -307,7 +243,7 @@ impl ResultSender for SlackResultSender {
             }
             if strings.len() > 0 {
                 Some(strings.join("\n"))
-            }else{
+            } else {
                 None
             }
         };
@@ -327,40 +263,40 @@ impl ResultSender for SlackResultSender {
                 let qr_data_future = qr_data_future.clone();
                 let fut = async move {
                     let target = SlackChannelMessageTarget::new(channel);
-                    message_to_channel_target(sender, qr_data_future, target, message)
-                        .await;
+                    message_to_channel_target(sender, qr_data_future, target, message).await;
                 };
 
                 futures_vec.push(fut.boxed());
             }
-            
+
             // Юзеру
             if let Some(user_id) = &sender.user_id {
                 let fut = async move {
                     let target = SlackUserMessageTarget::new(&user_id);
-                    message_to_user_target(sender, qr_data_future, target, message)
-                        .await;
+                    message_to_user_target(sender, qr_data_future, target, message).await;
                 };
 
                 futures_vec.push(fut.boxed());
             }
 
             join_all(futures_vec).await;
-        }else {
+        } else {
             // Массив наших тасков
             let mut futures_vec = Vec::new();
 
             // Просто засылаем QR код если нету сообщения
-            if let Some(qr_info) = qr_data_future.await{
+            if let Some(qr_info) = qr_data_future.await {
                 // let QRInfo { url, qr_data } = qr_info.deref();
 
                 // В канал
                 if let ChannelType::All(channel) = &sender.channel {
                     let target = SlackChannelImageTarget::new(&channel);
-                    let fut = sender.client.send_image(qr_info.qr_data.clone(), None, target);
+                    let fut = sender
+                        .client
+                        .send_image(qr_info.qr_data.clone(), None, target);
                     futures_vec.push(fut.boxed());
                 }
-                
+
                 // Юзеру
                 if let Some(user_id) = &sender.user_id {
                     let target = SlackUserImageTarget::new(&user_id);
@@ -371,10 +307,9 @@ impl ResultSender for SlackResultSender {
                 join_all(futures_vec).await;
             }
         }
-
     }
 
-    async fn send_error(&mut self, err: &dyn Error){
+    async fn send_error(&mut self, err: &dyn Error) {
         let sender = self.resolve_sender().await;
 
         let message = format!("Uploading error:```{}```", err);
@@ -383,16 +318,15 @@ impl ResultSender for SlackResultSender {
             let mut futures_vec = Vec::new();
 
             // Пишем в канал
-            match &sender.channel{
+            match &sender.channel {
                 ChannelType::All(channel) | ChannelType::ErrorsOnly(channel) => {
                     let target = SlackChannelMessageTarget::new(channel);
                     let fut = sender.client.send_message(&message, target).boxed();
                     futures_vec.push(fut);
                 }
-                &ChannelType::None => {
-                }
+                &ChannelType::None => {}
             }
-            
+
             // Пишем пользователю
             if let Some(user_id) = &sender.user_id {
                 let target = SlackUserMessageTarget::new(&user_id);
@@ -402,7 +336,7 @@ impl ResultSender for SlackResultSender {
 
             futures_vec
         };
-        
+
         join_all(futures_vec).await;
     }
 }

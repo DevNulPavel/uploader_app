@@ -1,9 +1,6 @@
 use serde::{
     Deserialize
 };
-use serde_json::{
-    Value
-};
 
 
 #[derive(Deserialize, Debug)]
@@ -58,11 +55,18 @@ impl<D> DataOrErrorResponse<D> {
 
 /// Тип ошибки, в который мы можем парсить наши данные
 #[derive(Deserialize, Debug)]
+pub struct ErrorInfo{
+    #[serde(rename = "errorMessage", default)]
+    pub error_message: String, 
+}
+
+/// Тип ошибки, в который мы можем парсить наши данные
+#[derive(Deserialize, Debug)]
 pub struct ErrorResponseValue{
     #[serde(rename = "httpCode")]
-    http_code: u32,
-    message: Option<String>,
-    errors: Option<Vec<Value>>,
+    pub http_code: u32,
+    pub message: Option<String>,
+    pub errors: Option<Vec<ErrorInfo>>,
     // #[serde(flatten)]
     // other: HashMap<String, Value>
 }

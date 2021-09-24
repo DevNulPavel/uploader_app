@@ -183,12 +183,21 @@ impl<'a> AppEdit<'a> {
             match resp.json::<ErrorResponseValue>().await{
                 Ok(api_err) => {
                     error!("Delete failed: code={}, err={:?}", responce_status, api_err);
+                    if let Some(error) = api_err.errors.and_then(|v| v.into_iter().next() ) {
+                        Err(AmazonError::ApkDeleteFailedWithCode{
+                            code: responce_status, 
+                            message: api_err.message, 
+                            desc: Some(error.error_message)
+                        })
+                    }else{
+                        Err(AmazonError::ApkDeleteFailedWithCode{code: responce_status, message: None, desc: None})
+                    }
                 },
                 Err(_) => {
                     error!("Delete failed: code={}", responce_status);
+                    Err(AmazonError::ApkDeleteFailedWithCode{code: responce_status, message: None, desc: None})
                 }
             }
-            Err(AmazonError::ApkDeleteFailedWithCode(responce_status))
         }
     }
 

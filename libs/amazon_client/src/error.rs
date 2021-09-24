@@ -37,7 +37,7 @@ pub enum AmazonError{
     ETagParseFailed,
     EmptyApksForCommit,
     ApkListFailedWithCode(StatusCode),
-    ApkDeleteFailedWithCode(StatusCode),
+    ApkDeleteFailedWithCode{ code: StatusCode, message: Option<String>, desc: Option<String>},
     UploadingFailedWithCode(StatusCode),
     ApiError(ErrorResponseValue),
     Custom(String),

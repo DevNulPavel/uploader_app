@@ -96,6 +96,7 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
         .args(&[
             "altool", "--upload-app",
             "-f", &app_params.ipa_file_path, 
+            "-t", "ios",
             "-u", &env_params.user,
             "-p", &env_params.pass
         ])

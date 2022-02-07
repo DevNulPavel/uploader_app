@@ -171,11 +171,11 @@ impl GoogleDriveClient {
         // let query = format!("(mimeType = 'application/vnd.google-apps.folder') and \
         //                      (files.id = '{}')", folder_id);
 
-        let query = format!("(mimeType = 'application/vnd.google-apps.folder')");
-        let mut found_list = get_files_list_with_query(&self.request_builder, &query, None)
+        let query = "(mimeType = 'application/vnd.google-apps.folder')";
+        let mut found_list = get_files_list_with_query(&self.request_builder, query, None)
             .await?;
 
-        while found_list.files.len() > 0 {
+        while !found_list.files.is_empty() {
             let found = found_list
                 .files
                 .into_iter()
@@ -190,7 +190,7 @@ impl GoogleDriveClient {
 
             // Иначе заново запрашиваем новую страницу
             if found_list.next_page_token.is_some(){
-                found_list = get_files_list_with_query(&self.request_builder, &query, found_list.next_page_token)
+                found_list = get_files_list_with_query(&self.request_builder, query, found_list.next_page_token)
                     .await?;
             }else{
                 info!("Folder search finished, next token is empty");
@@ -207,7 +207,7 @@ impl GoogleDriveClient {
 
         // Выгрузка файлика
         let upload_res = self
-            .upload_file(&task.parent_folder, &task.file_path)
+            .upload_file(task.parent_folder, &task.file_path)
             .await?;
 
         debug!(res = ?upload_res.get_info(), "Upload res");
@@ -215,11 +215,11 @@ impl GoogleDriveClient {
         // Смена владельца
         if let Some(email) = task.owner_email{
             upload_res
-                .update_owner(EmailFileOwner::new(&email))
+                .update_owner(EmailFileOwner::new(email))
                 .await?;
         }else if let Some(domain) = task.owner_domain{
             upload_res
-                .update_owner(DomainFileOwner::new(&domain))
+                .update_owner(DomainFileOwner::new(domain))
                 .await?;
         }else{
             return Err(GoogleDriveError::EmptyNewOwner);

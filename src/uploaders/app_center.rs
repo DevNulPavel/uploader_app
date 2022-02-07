@@ -104,7 +104,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
         let upload_result = app_center_client
             .upload_build(&task)
             .await
-            .map_err(|err| Box::new(err));
+            .map_err(Box::new);
 
         match upload_result {
             // Если все хорошо - возвращаем результат

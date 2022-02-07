@@ -105,10 +105,10 @@ impl From<ResolveError> for SshError{
 
 #[instrument]
 fn get_valid_address(server: String) -> Result<String, SshError> {
-    let addr = if let Ok(_) = &server.parse::<SocketAddrV4>(){
+    let addr = if server.parse::<SocketAddrV4>().is_ok(){
         server
     }else if let Ok(addr) = &server.parse::<Ipv4Addr>(){
-        SocketAddrV4::new(addr.clone(), 22).to_string()
+        SocketAddrV4::new(*addr, 22).to_string()
     }else {
         let resolver = Resolver::new(ResolverConfig::default(), 
                                      ResolverOpts::default())?;
@@ -139,7 +139,7 @@ fn try_to_auth(user: String,
     if !authentificated {
         if let Some(ref password) = pass {
             debug!("SSH password for auth");
-            authentificated = session.userauth_password(&user, &password).is_ok();
+            authentificated = session.userauth_password(&user, password).is_ok();
         }
     }
     if !authentificated {
@@ -177,7 +177,6 @@ fn get_remote_abs_path(target_dir: &str, session: &Session) -> Result<PathBuf, S
         let res = PathBuf::new()
             .join(output.trim())
             .join(input_path.strip_prefix("~/").unwrap()); // Unwrap, так как мы уже проверили выше
-        drop(input_path);
         res
     }else{
         return Err(SshError::InvalidTargetFolder("Only absolute and '~/' path supported"));
@@ -302,7 +301,7 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment,
         // Проверяем сразу, что есть все файлы перед загрузкой
         {
             let invalid_path = paths.iter().find(|p|{
-                p.exists() == false
+                !p.exists()
             });
             if let Some(invalid_path) = invalid_path {
                 return Err(SshError::InvalidFilePath(invalid_path.to_owned()));

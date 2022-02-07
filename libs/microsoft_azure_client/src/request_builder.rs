@@ -125,12 +125,12 @@ impl<'a> RequestBuilder {
             // Если есть flight id, добавляем
             if let Some(flight_id) = self.flight_id.as_ref() {
                 segments.push("flights");
-                segments.push(&flight_id);
+                segments.push(flight_id);
             }
             // Если есть submission id, добавляем
             if let Some(submission_id) = self.submission_id.as_ref() {
                 segments.push("submissions");
-                segments.push(&submission_id);
+                segments.push(submission_id);
                 // Команда сабмиссии
                 if let Some(submission_command) = self.submission_command.as_ref() {
                     segments.push(submission_command);
@@ -138,7 +138,7 @@ impl<'a> RequestBuilder {
             }
             for segment in self.path_segments.deref() {
                 let segment = segment.trim_matches('/');
-                let split = segment.split("/");
+                let split = segment.split('/');
                 for part in split{
                     segments.push(part);
                 }

@@ -28,7 +28,7 @@ fn any_is_some_impl(data: &Data) -> proc_macro2::TokenStream {
                         false #(#values)*
                     };
 
-                    res.into()
+                    res
                 }
                 Fields::Unnamed(_) | Fields::Unit => {
                     unimplemented!()

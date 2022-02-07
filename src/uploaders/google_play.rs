@@ -67,7 +67,7 @@ pub async fn upload_in_google_play(client: reqwest::Client,
     // Грузим файлы
     let path = Path::new(app_params.file_path.as_str());
     let task = GooglePlayUploadTask{
-        file_path: &path,
+        file_path: path,
         target_track: app_params.target_track.as_deref(),
         package_name: app_params.package_name.as_str()
     };

@@ -1,49 +1,32 @@
-use std::{
-    time::{
-        Instant,
-        Duration
-    }
-};
-use reqwest::{
-    Client
-};
-use serde_json::{
-    json
-};
-use tracing::{
-    debug
-};
-use super::{
-    error::{
-        AmazonError
-    },
-    responses::{
-        AmazonTokenResponse
-    }
-};
+use super::{error::AmazonError, responses::AmazonTokenResponse};
+use reqwest::Client;
+use serde_json::json;
+use std::time::{Duration, Instant};
+use tracing::debug;
 
 #[derive(Debug)]
-pub struct AmazonAccessToken{
+pub struct AmazonAccessToken {
     value: String,
-    expire_time: Instant
+    expire_time: Instant,
 }
 impl AmazonAccessToken {
     pub fn new(value: String, expire_time: Instant) -> AmazonAccessToken {
-        AmazonAccessToken{
-            value,
-            expire_time
-        }
+        AmazonAccessToken { value, expire_time }
     }
-    pub fn as_str_checked(&self) -> Result<&str, AmazonError>{
+    pub fn as_str_checked(&self) -> Result<&str, AmazonError> {
         if Instant::now() < self.expire_time {
             Ok(self.value.as_str())
-        }else{
+        } else {
             Err(AmazonError::TokenIsExpired)
         }
     }
 }
 
-pub async fn request_token(http_client: &Client, client_id: &str, client_secret: &str) -> Result<AmazonAccessToken, AmazonError>{
+pub async fn request_token(
+    http_client: &Client,
+    client_id: &str,
+    client_secret: &str,
+) -> Result<AmazonAccessToken, AmazonError> {
     // https://developer.amazon.com/docs/login-with-amazon/authorization-code-grant.html#access-token-response
 
     let response = http_client
@@ -63,9 +46,7 @@ pub async fn request_token(http_client: &Client, client_id: &str, client_secret:
 
     let expire_time = Instant::now()
         .checked_add(Duration::from_secs(response.expires_in))
-        .ok_or_else(||{
-            AmazonError::InvalidTokenDuration(response.expires_in)
-        })?;
+        .ok_or(AmazonError::InvalidTokenDuration(response.expires_in))?;
 
     Ok(AmazonAccessToken::new(response.access_token, expire_time))
 }

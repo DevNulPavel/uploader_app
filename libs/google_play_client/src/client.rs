@@ -77,18 +77,18 @@ impl GooglePlayClient {
 
         // Старт редактирования
         let edit = self
-            .start_insert(&task.package_name)
+            .start_insert(task.package_name)
             .await?;
         debug!("Google play edit started");
 
         // Выгрузка
         let upload_result = edit
-            .upload_build(&task.file_path)
+            .upload_build(task.file_path)
             .await?;
         debug!("Google play upload result: {:#?}", upload_result);
 
         // Обновляем таргет если надо
-        if let Some(ref target_track) = task.target_track{
+        if let Some(target_track) = task.target_track{
             let track_update_result = edit
                 .update_track_to_complete(target_track, &upload_result)
                 .await?;

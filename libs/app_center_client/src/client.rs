@@ -25,7 +25,7 @@ use super::{
         AppCenterRequestBuilder,
         AppCenterUrlTarget::{
             // API,
-            APPLICATION
+            Application
         }
     },
     responses::{
@@ -95,7 +95,7 @@ impl AppCenterClient {
         // Базовый запрос
         let req = self
             .request_builder
-            .build_request(APPLICATION, Method::POST, "uploads/releases", true)?;
+            .build_request(Application, Method::POST, "uploads/releases", true)?;
         
         // Закидываем версию
         let req = if let Some(v) = version{
@@ -127,7 +127,7 @@ impl AppCenterClient {
     async fn set_upload_finished_status(&self, release_info: &ReleasesResponse) -> Result<UploadingFinishedSetStatusResponse, AppCenterError>{
         let path = format!("uploads/releases/{}", release_info.id);
         let update_status_resp = self.request_builder
-            .build_request(APPLICATION, Method::PATCH, &path, true)?
+            .build_request(Application, Method::PATCH, &path, true)?
             .json(&json!({
                 "upload_status": "uploadFinished",
                 "id": release_info.id
@@ -152,7 +152,7 @@ impl AppCenterClient {
 
         loop {
             let update_status_resp = self.request_builder
-                .build_request(APPLICATION, Method::GET, &path, true)?
+                .build_request(Application, Method::GET, &path, true)?
                 .send()
                 .await?
                 .error_for_status()?         
@@ -190,7 +190,7 @@ impl AppCenterClient {
                         format!("• Branch: {}\n\n• Commit: {}\n\n\n\n{}", git.branch, git.commit, desc)
                     },
                     None => {
-                        format!("{}", desc)
+                        desc.to_string()
                     }
                 }
             },
@@ -213,7 +213,7 @@ impl AppCenterClient {
         let path = format!("releases/{}", release_id);
         let set_info_result = self
             .request_builder
-            .build_request(APPLICATION, Method::PUT, &path, true)?
+            .build_request(Application, Method::PUT, &path, true)?
             .json(&json!(
                 {
                     "enabled": true,
@@ -251,7 +251,7 @@ impl AppCenterClient {
 
             let request = self
                 .request_builder
-                .build_request(APPLICATION, Method::PATCH, &path, true)?
+                .build_request(Application, Method::PATCH, &path, true)?
                 .json(&json!(
                     {
                         "notify_testers": false,
@@ -291,7 +291,7 @@ impl AppCenterClient {
         let path = format!("releases/{}", release_id);
         let result = self
             .request_builder
-            .build_request(APPLICATION, Method::GET, &path, true)?
+            .build_request(Application, Method::GET, &path, true)?
             .send()
             .await?
             .error_for_status()?
@@ -312,7 +312,7 @@ impl AppCenterClient {
         // Выгрузка файлика
         AppCenterUploader::new(self.request_builder.get_http_client().clone(), 
                                &release_info, 
-                               &task.file_path,
+                               task.file_path,
                                task.upload_threads_count)
             .await?
             .upload()
@@ -330,12 +330,12 @@ impl AppCenterClient {
 
         // Обновляем мету
         self
-            .update_build_meta(release_id, &task)
+            .update_build_meta(release_id, task)
             .await?;
 
         // Обновляем группы дистрибуции
         self
-            .update_distribution_groups(release_id, &task)
+            .update_distribution_groups(release_id, task)
             .await?;
 
         // Получение информации по релизу

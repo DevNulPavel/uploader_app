@@ -39,9 +39,9 @@ pub struct GoogleDriveFolder{
     request_builder: GoogleDriveRequestBuilder,
     info: FilesUploadResponseOk
 }
-impl Into<FilesUploadResponseOk> for GoogleDriveFolder {
-    fn into(self) -> FilesUploadResponseOk {
-        self.info
+impl From<GoogleDriveFolder> for FilesUploadResponseOk {
+    fn from(file: GoogleDriveFolder) -> Self {
+        file.info
     }
 }
 impl GoogleDriveFolder {
@@ -65,7 +65,7 @@ impl GoogleDriveFolder {
         let mut files_list = get_files_list_with_query(&self.request_builder, &query, None)
             .await?;
         
-        while files_list.files.len() > 0 {
+        while !files_list.files.is_empty() {
             // Обходим найденный список
             // TODO: Можно было бы убрать фильтрацию тут
             let found_res = files_list
@@ -79,7 +79,7 @@ impl GoogleDriveFolder {
 
                     val.mime_type.eq("application/vnd.google-apps.folder") &&
                     val.name.eq(subfolder_name) &&
-                    parents.iter().find(|id| id.as_str().eq(self.info.id.as_str())).is_some()
+                    parents.iter().any(|id| id.as_str().eq(self.info.id.as_str()))
                 });
 
             // Нашли - возврат
@@ -141,7 +141,7 @@ impl GoogleDriveFolder {
 
         if let Some(found) = found_sub_folder_id{
             debug!(id = ?found.get_info(), "Found subfolder id");
-            return Ok(found);
+            Ok(found)
         }else{
             return self.create_sub_folder(subfolder_name).await;
         }

@@ -58,7 +58,7 @@ pub async fn upload_in_amazon(http_client: reqwest::Client,
     let client = AmazonClient::new(http_client, token);
     let task = AmazonUploadTask{
         application_id: &env_params.app_id,
-        file_path: file_path
+        file_path
     };
     client
         .upload(task)

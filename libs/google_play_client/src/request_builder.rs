@@ -123,7 +123,7 @@ impl<'a> GooglePlayRequestBuilder {
             }
             for segment in self.path_segments.deref() {
                 let segment = segment.trim_matches('/');
-                let split = segment.split("/");
+                let split = segment.split('/');
                 for part in split{
                     segments.push(part);
                 }

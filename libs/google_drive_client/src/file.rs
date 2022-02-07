@@ -77,9 +77,9 @@ pub struct GoogleDriveFile{
     client: GoogleDriveRequestBuilder,
     info: FilesUploadResponseOk
 }
-impl Into<FilesUploadResponseOk> for GoogleDriveFile {
-    fn into(self) -> FilesUploadResponseOk {
-        self.info
+impl From<GoogleDriveFile> for FilesUploadResponseOk {
+    fn from(f: GoogleDriveFile) -> Self {
+        f.info
     }
 }
 impl GoogleDriveFile {

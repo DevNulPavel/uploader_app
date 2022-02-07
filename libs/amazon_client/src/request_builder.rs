@@ -33,7 +33,7 @@ impl<'a> AmazonAppRequestBuilder<'a> {
 
         let base_addr = format!("https://developer.amazon.com/api/appstore/v1/applications/{}/", app_id);
 
-        if !base_addr.ends_with("/"){
+        if !base_addr.ends_with('/'){
             return Err(AmazonError::InvalidBaseAddr("Base addr must ends with /".to_owned()));
         }
         

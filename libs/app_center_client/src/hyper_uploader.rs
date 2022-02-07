@@ -93,6 +93,7 @@ where
     #[derive(Debug, Deserialize)]
     struct Response{
         error_code: String,
+        #[allow(dead_code)]
         chunk_num: usize,
         error: bool
     }
@@ -147,11 +148,11 @@ impl<'a> AppCenterUploader<'a> {
         let file_name = self
             .file_path
             .file_name()
-            .ok_or_else(|| AppCenterError::WrongFilePath )?
+            .ok_or(AppCenterError::WrongFilePath)?
             .to_str()
-            .ok_or_else(|| AppCenterError::WrongFilePath )?;
+            .ok_or(AppCenterError::WrongFilePath)?;
 
-        let content_type = upload_content_type_for_file(&self.file_path);
+        let content_type = upload_content_type_for_file(self.file_path);
 
         let file_length = format!("{}", self.file_length);
 
@@ -230,7 +231,7 @@ impl<'a> AppCenterUploader<'a> {
             };
 
             // Кидаем задачу на загрузку
-            let fut_in_pined_box = upload_file_chunk(&client, &self.release_info, i, chunks_count, buffer).boxed();
+            let fut_in_pined_box = upload_file_chunk(&client, self.release_info, i, chunks_count, buffer).boxed();
             futures_vec.push(fut_in_pined_box);
 
             // Ждем возможности закинуть еще задачу либо ждем завершения всех тасков если дошли до конца

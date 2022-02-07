@@ -23,8 +23,8 @@ use super::{
 
 #[allow(dead_code)]
 pub enum AppCenterUrlTarget{
-    API,
-    APPLICATION
+    Api,
+    Application
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -55,7 +55,7 @@ impl AppCenterRequestBuilder {
                app_owner: &str,
                app_name: &str,) -> Result<AppCenterRequestBuilder, AppCenterError> {
 
-        if !base_addr.ends_with("/"){
+        if !base_addr.ends_with('/'){
             return Err(AppCenterError::InvalidBaseAddr("Base addr must ends with /".to_owned()));
         }
         
@@ -112,8 +112,8 @@ impl AppCenterRequestBuilder {
         } = self.internal.as_ref();
 
         let url = match target {
-            AppCenterUrlTarget::API => api_url,
-            AppCenterUrlTarget::APPLICATION => app_url,
+            AppCenterUrlTarget::Api => api_url,
+            AppCenterUrlTarget::Application => app_url,
         };
 
         let full_url = url.join(path)?;
@@ -171,7 +171,7 @@ mod tests{
         // GET
         {
             let req = builder
-                .build_request(AppCenterUrlTarget::API, Method::GET, "test/path/", true)
+                .build_request(AppCenterUrlTarget::Api, Method::GET, "test/path/", true)
                 .expect("API path failed")
                 .build()
                 .expect("API request build failed");
@@ -192,7 +192,7 @@ mod tests{
         // POST
         {
             let req = builder
-                .build_request(AppCenterUrlTarget::API, Method::POST, "test/path/", true)
+                .build_request(AppCenterUrlTarget::Api, Method::POST, "test/path/", true)
                 .expect("API path failed")
                 .build()
                 .expect("API request build failed");
@@ -213,7 +213,7 @@ mod tests{
         // GET APP
         {
             let req = builder
-                .build_request(AppCenterUrlTarget::APPLICATION, Method::GET, "test/path/", true)
+                .build_request(AppCenterUrlTarget::Application, Method::GET, "test/path/", true)
                 .expect("API path failed")
                 .build()
                 .expect("API request build failed");
@@ -239,7 +239,7 @@ mod tests{
         // POST APP
         {
             let req = builder
-                .build_request(AppCenterUrlTarget::APPLICATION, Method::POST, "test/path/", true)
+                .build_request(AppCenterUrlTarget::Application, Method::POST, "test/path/", true)
                 .expect("API path failed")
                 .build()
                 .expect("API request build failed");

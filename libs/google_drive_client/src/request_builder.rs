@@ -50,7 +50,7 @@ impl GoogleDriveRequestBuilder {
 
         const BASE_ADDR: &str = "https://www.googleapis.com/";
 
-        if !BASE_ADDR.ends_with("/"){
+        if !BASE_ADDR.ends_with('/'){
             return Err(GoogleDriveError::InvalidBaseAddr(tracing_error::SpanTrace::capture(), "Base addr must ends with /".to_owned()));
         }
         

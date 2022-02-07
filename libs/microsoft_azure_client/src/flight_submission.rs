@@ -26,20 +26,6 @@ use tokio::{
         AsyncReadExt
     }
 };
-use tracing_error::SpanTrace;
-use tokio_util::{
-    codec::{
-        BytesCodec,
-        FramedRead
-    }
-};
-use reqwest::{
-    Body,
-    multipart::{
-        Form,
-        Part
-    }
-};
 // use serde_json::{
 //     json
 // };
@@ -50,17 +36,13 @@ use crate::{
     error::{
         MicrosoftAzureError
     },
-    helpers::{
-        check_file_extention
-    },
     responses::{
         DataOrErrorResponse,
         FlightCreateResponse,
         FlightSubmissionsCreateResponse,
         FlightSubmissionCommitResponse,
         SubmissionStatusResponse,
-        FlightInfoResponse,
-        ErrorResponseValue
+        FlightInfoResponse
     }
 };
 
@@ -231,10 +213,7 @@ impl FlightSubmission {
 
             // TODO: Убрать создание нового буффера каждый раз,
             // Вроде бы как Hyper позволяет использовать slice для выгрузки
-            let mut buffer = Vec::<u8>::with_capacity(buffer_size_limit as usize);
-
-            // В данный буффер будем лишь писать сначала, поэтому можно не инициализировать данные ничем
-            unsafe{ buffer.set_len(buffer_size_limit as usize); }
+            let mut buffer = vec![0; buffer_size_limit as usize];
 
             // Читаем из файлика данные в буффер
             let read_size = source_file
@@ -244,7 +223,7 @@ impl FlightSubmission {
             debug!("Microsoft azure: bytes read from file {}", read_size.file_size(humansize::file_size_opts::BINARY).unwrap());
 
             // Отнимаем нужное значения размера данных
-            data_left = data_left - (read_size as i64);
+            data_left -= read_size as i64;
 
             // Обрезаем буффер на нужный размер
             buffer.truncate(read_size);

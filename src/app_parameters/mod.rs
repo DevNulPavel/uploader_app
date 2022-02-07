@@ -33,7 +33,7 @@ pub struct AppParameters{
 }
 
 impl AppParameters{
-    fn get_params_app<'a>(env_variables_help: Option<&'a str>) -> App<'a, 'a>{
+    fn get_params_app(env_variables_help: Option<&str>) -> App<'_, '_>{
         let app = App::new("Uploader application")
             .author("Pavel Ershov")
             .version("1.0.0")
@@ -81,8 +81,7 @@ impl AppParameters{
         let matches = AppParameters::get_params_app(text.as_deref())
             .get_matches();
     
-        let parameters = AppParameters::matches_to_struct(matches);
-        parameters
+        AppParameters::matches_to_struct(matches)
     }
 }
 
@@ -112,11 +111,11 @@ mod tests{
 
         let result = AppParameters::matches_to_struct(matches);
 
-        let ref app_center_params = result
+        let app_center_params = result
             .app_center
             .expect("Appcenter values failed");
 
-        assert_eq!(app_center_params.input_file.eq(app_center_file), true);
+        assert!(app_center_params.input_file.eq(app_center_file));
         assert_eq!(app_center_params.symbols_file, Some(app_center_symbols.to_owned()));
         assert_eq!(app_center_params.distribution_groups, Some(vec![
             "group1".to_owned(),

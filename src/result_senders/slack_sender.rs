@@ -42,7 +42,7 @@ fn qr_future_for_result(
                         QRInfo{
                             inner
                         }*/
-                        QRInfo { url: url, qr_data }
+                        QRInfo { qr_data }
                     });
                 res
             };
@@ -111,7 +111,6 @@ struct QRInfo{
 }*/
 #[derive(Clone)]
 struct QRInfo {
-    url: String,
     qr_data: Vec<u8>,
 }
 
@@ -202,7 +201,7 @@ impl SlackResultSender {
             SenderResolved {
                 client,
                 text_prefix: params.text_prefix,
-                channel: channel,
+                channel,
                 user_id,
             }
         });
@@ -241,7 +240,7 @@ impl ResultSender for SlackResultSender {
                 let text = format!("```{}```", message);
                 strings.push(Cow::from(text));
             }
-            if strings.len() > 0 {
+            if !strings.is_empty() {
                 Some(strings.join("\n"))
             } else {
                 None
@@ -272,7 +271,7 @@ impl ResultSender for SlackResultSender {
             // Юзеру
             if let Some(user_id) = &sender.user_id {
                 let fut = async move {
-                    let target = SlackUserMessageTarget::new(&user_id);
+                    let target = SlackUserMessageTarget::new(user_id);
                     message_to_user_target(sender, qr_data_future, target, message).await;
                 };
 
@@ -290,7 +289,7 @@ impl ResultSender for SlackResultSender {
 
                 // В канал
                 if let ChannelType::All(channel) = &sender.channel {
-                    let target = SlackChannelImageTarget::new(&channel);
+                    let target = SlackChannelImageTarget::new(channel);
                     let fut = sender
                         .client
                         .send_image(qr_info.qr_data.clone(), None, target);
@@ -299,7 +298,7 @@ impl ResultSender for SlackResultSender {
 
                 // Юзеру
                 if let Some(user_id) = &sender.user_id {
-                    let target = SlackUserImageTarget::new(&user_id);
+                    let target = SlackUserImageTarget::new(user_id);
                     let fut = sender.client.send_image(qr_info.qr_data, None, target);
                     futures_vec.push(fut.boxed());
                 }
@@ -329,7 +328,7 @@ impl ResultSender for SlackResultSender {
 
             // Пишем пользователю
             if let Some(user_id) = &sender.user_id {
-                let target = SlackUserMessageTarget::new(&user_id);
+                let target = SlackUserMessageTarget::new(user_id);
                 let fut = sender.client.send_message(&message, target).boxed();
                 futures_vec.push(fut);
             }

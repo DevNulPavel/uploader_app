@@ -21,12 +21,13 @@ use super::{
 
 pub struct TerminalSender{
 }
-#[async_trait(?Send)]
+// #[async_trait(?Send)]
+#[async_trait]
 impl ResultSender for TerminalSender {
-    async fn send_result(&mut self, result: &UploadResultData){
+    async fn send_result(&self, result: &UploadResultData){
         info!(%result, "Uploading task success");
     }
-    async fn send_error(&mut self, err: &dyn Error){
+    async fn send_error(&self, err: &(dyn Error + Send + Sync)){
         error!(%err, "Uploading task error");
     }
 }

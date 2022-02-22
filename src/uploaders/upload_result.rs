@@ -4,6 +4,9 @@ use std::{
         Display,
         self
     }, 
+    error::{
+        Error
+    },
     writeln
 };
 
@@ -22,5 +25,5 @@ impl Display for UploadResultData {
 
 pub type UploadResult = std::result::Result<
     UploadResultData, 
-    Box<dyn std::error::Error>
+    Box<dyn Error + Send + Sync>
 >;

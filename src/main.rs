@@ -13,47 +13,64 @@ use self::{
     },
 };
 use futures::future::{join_all, select_all, Future, FutureExt};
-use std::pin::Pin;
+use std::{pin::Pin, process::exit};
 use tokio::runtime::Builder;
 use tracing::{debug, error, info, instrument};
 
+/// Выполняем выгрузку, если вообще все выгрузки не сработали - возвращаем false
+/// Если хотя бы одна выгрузка была успешной - true
 #[instrument(skip(active_workers, result_senders))]
-async fn wait_results<W, S>(mut active_workers: Vec<W>, mut result_senders: Vec<Box<S>>)
+async fn wait_results<W, S>(mut active_workers: Vec<W>, result_senders: Vec<Box<S>>) -> bool
 where
     W: Future<Output = UploadResult> + Unpin,
-    S: ResultSender + ?Sized,
+    S: ResultSender + ?Sized + Send + Sync + 'static,
 {
+    // Специальный флаг, который показывает, что у нас была хотя бы одна успешная выгрузка
+    let mut has_success_uploading = false;
+
+    let (mut tx, mut rx) = tokio::sync::mpsc::channel::<UploadResult>(20);
+    let result_sender_task = tokio::spawn(async move {
+        while let Some(res) = rx.recv().await {
+            // Обрабатываем результат
+            match res {
+                Ok(res) => {
+                    // Пишем во все получатели асинхронно
+                    let futures_iter = result_senders
+                        .iter()
+                        .map(|sender| sender.send_result(&res));
+                    join_all(futures_iter).await;
+                }
+                Err(err) => {
+                    // Пишем во все получатели асинхронно
+                    let futures_iter = result_senders
+                        .iter()
+                        .map(|sender| sender.send_error(err.as_ref()));
+                    join_all(futures_iter).await;
+                    error!(%err, "Uploading task failed");
+                }
+            }
+        }
+    });
+
     // Смотрим на завершающиеся воркеры
     while !active_workers.is_empty() {
         // Выбираем успешную фьючу, получаем оставшиеся
         let (res, _, left_workers) = select_all(active_workers).await;
         active_workers = left_workers;
 
-        // Обрабатываем результат
-        match res {
-            Ok(res) => {
-                /*let mut futures = Vec::new();
-                for mut sender in result_senders{
-                    let fut = sender.send_result(&res);
-                    futures.push(fut);
-                }*/
-
-                // Пишем во все получатели асинхронно
-                let futures_iter = result_senders
-                    .iter_mut()
-                    .map(|sender| sender.send_result(&res));
-                join_all(futures_iter).await;
-            }
-            Err(err) => {
-                // Пишем во все получатели асинхронно
-                let futures_iter = result_senders
-                    .iter_mut()
-                    .map(|sender| sender.send_error(err.as_ref()));
-                join_all(futures_iter).await;
-                error!(%err, "Uploading task failed");
-            }
+        // Проставляем флаг успешности
+        if res.is_ok() {
+            has_success_uploading = true;
         }
+
+        // Отправляем результат отгрузчику результатов в отдельной таске
+        tx.send(res).await.unwrap();
     }
+
+    // Ждем завершения оповещений
+    result_sender_task.await.unwrap();
+
+    has_success_uploading
 }
 
 struct UploadersResult {
@@ -166,7 +183,7 @@ async fn async_main() {
 
     // Получаетели результатов выгрузки
     let result_senders = {
-        let mut result_senders: Vec<Box<dyn ResultSender>> = Vec::new();
+        let mut result_senders: Vec<Box<dyn ResultSender + Send + Sync>> = Vec::new();
 
         // Создаем клиента для слака если надо отправлять результаты в слак
         if let Some(slack_params) = result_slack {
@@ -180,7 +197,12 @@ async fn async_main() {
         result_senders
     };
 
-    wait_results(active_workers, result_senders).await;
+    // Если все отгрузчики не сработали, тогда мы завершаем приложение с ошибкой
+    let success = wait_results(active_workers, result_senders).await;
+    if !success {
+        error!("All uploaders failed");
+        exit(3);
+    }
 }
 
 fn setup_logs() {

@@ -14,13 +14,14 @@ use slack_client_lib::{
     // UsersJsonCache,
     UsersSqliteCache,
 };
-use std::{borrow::Cow, error::Error, path::PathBuf, pin::Pin};
+use std::{borrow::Cow, error::Error, path::PathBuf, pin::Pin, sync::Arc};
 use tokio::{
     join, spawn,
     task::{
         spawn_blocking, // spawn_local
         JoinHandle,
     },
+    sync::Mutex
 };
 use tracing::error;
 
@@ -129,11 +130,11 @@ struct SenderResolved {
 
 enum ResultSenderState {
     Pending(JoinHandle<SenderResolved>),
-    Resolved(SenderResolved),
+    Resolved(Arc<SenderResolved>),
 }
 
 pub struct SlackResultSender {
-    inner: ResultSenderState,
+    inner: Arc<Mutex<ResultSenderState>>,
 }
 impl SlackResultSender {
     pub fn new(http_client: Client, params: ResultSlackEnvironment) -> SlackResultSender {
@@ -206,29 +207,35 @@ impl SlackResultSender {
             }
         });
         SlackResultSender {
-            inner: ResultSenderState::Pending(join),
+            inner: Arc::new(Mutex::new(ResultSenderState::Pending(join))),
         }
     }
 
-    async fn resolve_sender(&mut self) -> &SenderResolved {
+    async fn resolve_sender(&self) -> Arc<SenderResolved> {
         let sender = loop {
-            match self.inner {
-                ResultSenderState::Pending(ref mut join) => {
+            use std::ops::DerefMut;
+            let mut lock = self.inner.lock().await;
+            match lock.deref_mut() {
+                ResultSenderState::Pending(join) => {
                     let resolved = join.await.expect("Slack sender resolve failed");
-                    self.inner = ResultSenderState::Resolved(resolved);
+                    *lock = ResultSenderState::Resolved(Arc::new(resolved));
+                    // self.inner = Arc::new(Mutex::new());
                 }
-                ResultSenderState::Resolved(ref sender) => {
-                    break sender;
+                ResultSenderState::Resolved(sender) => {
+                    break sender.clone();
                 }
             }
         };
         sender
     }
 }
-#[async_trait(?Send)]
+
+// #[async_trait(?Send)]
+#[async_trait]
 impl ResultSender for SlackResultSender {
-    async fn send_result(&mut self, result: &UploadResultData) {
-        let sender = self.resolve_sender().await;
+    async fn send_result(&self, result: &UploadResultData) {
+        let sender_arc = self.resolve_sender().await;
+        let sender = sender_arc.as_ref();
 
         // Собираем текст в кучу
         let text = {
@@ -258,7 +265,7 @@ impl ResultSender for SlackResultSender {
             let qr_data_future = qr_data_future.shared();
 
             // В канал
-            if let ChannelType::All(channel) = &sender.channel {
+            if let ChannelType::All(ref channel) = sender.channel {
                 let qr_data_future = qr_data_future.clone();
                 let fut = async move {
                     let target = SlackChannelMessageTarget::new(channel);
@@ -308,7 +315,7 @@ impl ResultSender for SlackResultSender {
         }
     }
 
-    async fn send_error(&mut self, err: &dyn Error) {
+    async fn send_error(&self, err: &(dyn Error + Send + Sync)) {
         let sender = self.resolve_sender().await;
 
         let message = format!("Uploading error:```{}```", err);

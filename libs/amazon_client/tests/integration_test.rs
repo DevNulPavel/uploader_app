@@ -68,7 +68,7 @@ async fn library_integration_test(){
     let client = AmazonClient::new(http_client, token);
     let task = AmazonUploadTask{
         application_id: &app_id,
-        file_path: file_path
+        file_path
     };
     client
         .upload(task)

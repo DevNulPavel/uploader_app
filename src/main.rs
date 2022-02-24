@@ -67,6 +67,9 @@ where
         tx.send(res).await.unwrap();
     }
 
+    // Удаляем отправителя чтобы фоновый отправитель результатов перестал работать
+    drop(tx);
+
     // Ждем завершения оповещений
     result_sender_task.await.unwrap();
 

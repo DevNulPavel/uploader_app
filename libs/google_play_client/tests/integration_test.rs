@@ -40,7 +40,7 @@ fn setup_logs() {
 async fn library_integration_test(){
     setup_logs();
 
-    let key = yup_oauth2::read_service_account_key("test_google_play_island-tales_auth.json")
+    let key = yup_oauth2::read_service_account_key("google_play_beta_credentials.json")
         .await
         .expect("Auth info parse failed");
 
@@ -60,11 +60,11 @@ async fn library_integration_test(){
 
     info!("Google play client created");
 
-    let file_path = PathBuf::from("/Users/devnul/Downloads/111.aab");
+    let file_path = PathBuf::from("/Users/devnul/Downloads/MHouseBeta-gplay-production-v5.130.1.589-b589-91d61914/MHouseXGen-gplay-production-5.130.1.589-91d61914.aab");
 
     let task = GooglePlayUploadTask{
         file_path: &file_path,
-        package_name: "com.gameinsight.gplay.islandtales",
+        package_name: "com.gameinsight.gplay.mmanorbeta2",
         target_track: Some("internal")
         // target_track: None
     };

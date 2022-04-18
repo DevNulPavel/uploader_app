@@ -37,3 +37,9 @@ export RUST_LOG=debug
 # UPLOAD_PARAMS+=(--google_play_target_track 'internal')
 # UPLOAD_PARAMS+=(--google_play_package_name 'com.gameinsight.gplay.island2')
 # target/debug/uploader_app "${UPLOAD_PARAMS[@]}"
+
+# SSH
+UPLOAD_PARAMS=()
+UPLOAD_PARAMS+=(--ssh_target_server_dir '~/test_folder')
+UPLOAD_PARAMS+=(--ssh_upload_files '/Users/devnul/projects/uploader_app_src/Makefile')
+target/debug/uploader_app "${UPLOAD_PARAMS[@]}"

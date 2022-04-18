@@ -69,7 +69,7 @@ use super::{
 enum SshError{
     SshErr(ssh2::Error),
     IO(io::Error),
-    DNSError(ResolveError),
+    DNSError(Box<ResolveError>),
     IpV6IsUnsupported,
     EmptyDNSAddresses,
     PrivateKeyNotFound,
@@ -97,7 +97,7 @@ impl From<io::Error> for SshError{
 }
 impl From<ResolveError> for SshError{
     fn from(err: ResolveError) -> Self {
-        SshError::DNSError(err)
+        SshError::DNSError(Box::new(err))
     }
 }
 
@@ -132,30 +132,19 @@ fn get_valid_address(server: String) -> Result<String, SshError> {
 
 #[instrument(skip(session))]
 fn try_to_auth(user: String, 
-              pass: Option<String>, 
-              key_file: Option<String>, 
-              session: &Session) -> Result<(), SshError>{
-    let mut authentificated = false;
-    if !authentificated {
-        if let Some(ref password) = pass {
-            debug!("SSH password for auth");
-            authentificated = session.userauth_password(&user, password).is_ok();
-        }
+               key_file: String, 
+               session: &Session) -> Result<(), SshError>{
+
+    let path = Path::new(&key_file);
+    if !path.exists(){
+        error!("SSH private key for does not exist");
+        return Err(SshError::PrivateKeyNotFound);
     }
-    if !authentificated {
-        if let Some(ref key_path) = key_file {
-            let path = Path::new(&key_path);
-            if !path.exists(){
-                error!("SSH private key for does not exist");
-                return Err(SshError::PrivateKeyNotFound);
-            }
-            debug!("SSH private key for auth");
-            authentificated = session.userauth_pubkey_file(&user, 
-                                                           None,
-                                                           path,
-                                                           None).is_ok();
-        }
-    }
+    debug!("SSH private key for auth");
+    let authentificated = session.userauth_pubkey_file(&user, 
+                                                       None,
+                                                       path,
+                                                       None).is_ok();
     if !authentificated {
         debug!("NO auth info");
         return Err(SshError::AuthFailed);
@@ -279,7 +268,7 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment,
         session.handshake()?;
         debug!("Handshade complete");
 
-        try_to_auth(env_params.user, env_params.pass, env_params.key_file, &session)?;
+        try_to_auth(env_params.user, env_params.key_file, &session)?;
         debug!("Auth complete");
 
         // Абсолютный путь на сервере к папке
@@ -347,8 +336,7 @@ mod tests{
         let env_params = SSHEnvironment{
             server: "10.51.254.143".to_owned(), // TODO: DNS name
             user: "jenkins".to_owned(),
-            key_file: Some("/Users/devnul/.ssh/id_rsa".to_owned()),
-            pass: None,
+            key_file: "/Users/devnul/.ssh/id_rsa".to_owned()
         };
         let app_params = SSHParams{
             files: vec![

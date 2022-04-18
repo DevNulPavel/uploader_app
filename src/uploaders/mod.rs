@@ -4,7 +4,12 @@ mod google_drive;
 mod google_play;
 mod amazon;
 mod ios;
-mod ssh;
+
+// #[cfg(target_family = "unix")]
+// mod ssh_unix;
+
+// #[cfg(target_family = "windows")]
+mod ssh_windows;
 
 pub use self::{
     upload_result::{
@@ -26,7 +31,14 @@ pub use self::{
     ios::{
         upload_in_ios
     },
-    ssh::{
+
+    // #[cfg(target_family = "unix")]
+    // ssh_unix::{
+    //     upload_by_ssh
+    // }
+
+    // #[cfg(target_family = "windows")]
+    ssh_windows::{
         upload_by_ssh
     }
 };

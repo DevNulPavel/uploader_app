@@ -7,22 +7,9 @@ BUILD:
 BUILD_RELEASE:
 	cargo build --release
 
-ENCRYPT_TEST_ENV:
-	cd ./env && \
-	gpg -a -r 0x0BD10E4E6E578FB6 -o test_environment.env.asc -e test_environment.env && \
-	gpg -a -r 0x0BD10E4E6E578FB6 -o test_google_drive_my_auth.json.asc -e test_google_drive_my_auth.json && \
-	gpg -a -r 0x0BD10E4E6E578FB6 -o test_google_play_classic_auth.json.asc -e test_google_play_classic_auth.json && \
-	gpg -a -r 0x0BD10E4E6E578FB6 -o test_google_play_island-tales_auth.json.asc -e test_google_play_island-tales_auth.json && \
-	gpg -a -r 0x0BD10E4E6E578FB6 -o test_google_play_auth.json.asc -e test_google_play_auth.json
-
-DECRYPT_TEST_ENV:
-	cd ./env && \
-	gpg -a -r 0x0BD10E4E6E578FB6 -o test_environment.env -d test_environment.env.asc && \
-	gpg -a -r 0x0BD10E4E6E578FB6 -o test_google_drive_my_auth.json -d test_google_drive_my_auth.json.asc && \
-	gpg -a -r 0x0BD10E4E6E578FB6 -o test_google_play_classic_auth.json -d test_google_play_classic_auth.json.asc && \
-	gpg -a -r 0x0BD10E4E6E578FB6 -o test_google_play_island-tales_auth.json -d test_google_play_island-tales_auth.json.asc && \
-	gpg -a -r 0x0BD10E4E6E578FB6 -o test_google_play_auth.json -d test_google_play_auth.json.asc
-
+DECRYPT_CONFIGS:
+	git-crypt unlock
+	
 BENCH:
 	source env/test_environment.env && \
 	cargo run --release --features=flame_it

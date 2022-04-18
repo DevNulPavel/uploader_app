@@ -1,7 +1,9 @@
+# На всякий пожарный защита
+!.gitignore
+!.gitattributes
+
 /target
 /logs
 /uploading_logs
 **/*.rs.bk
 flame-graph.html
-*.env
-*.json

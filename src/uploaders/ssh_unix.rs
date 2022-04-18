@@ -276,7 +276,6 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment,
 
         let mut session = Session::new()?;
         session.set_tcp_stream(stream);
-        
         session.handshake()?;
         debug!("Handshade complete");
 

@@ -71,9 +71,9 @@ fn execute_ssh_command_with_output(
             &format!("{}@{}", ssh_info.env_params.user, ssh_info.env_params.server),
             command
         ])
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdin(Stdio::piped())  // Возможны проблемы на винде, поэтому всегда piped
+        .stdout(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
+        .stderr(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
         .spawn()
         .map_err(|err| SshError::SpawnFail{ err })?
         .wait_with_output()
@@ -112,9 +112,9 @@ fn execute_ssh_command(ssh_info: &SshExecuteInfo, command: &str) -> Result<(), S
             &format!("{}@{}", ssh_info.env_params.user, ssh_info.env_params.server),
             command
         ])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
+        .stdin(Stdio::piped())  // Возможны проблемы на винде, поэтому всегда piped
+        .stdout(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
+        .stderr(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
         .spawn()
         .map_err(|err| SshError::SpawnFail{ err })?
         .wait_with_output()
@@ -188,9 +188,9 @@ fn execute_scp_uploading(
             &format!("{}", source_file.display()), // TODO: Лишнее выделение памяти
             &format!("{}@{}:{}/", ssh_info.env_params.user, ssh_info.env_params.server, target_dir.display()),
         ])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
+        .stdin(Stdio::piped())  // Возможны проблемы на винде, поэтому всегда piped
+        .stdout(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
+        .stderr(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
         .spawn()
         .map_err(|err| SshError::SpawnFail{ err })?
         .wait_with_output()

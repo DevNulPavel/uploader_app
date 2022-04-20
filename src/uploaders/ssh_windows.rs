@@ -4,7 +4,7 @@ use image::EncodableLayout;
 use std::{
     borrow::Cow,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{Command, Output, Stdio},
     str::from_utf8,
 };
 use tokio::task::{spawn_blocking, JoinHandle};
@@ -15,36 +15,36 @@ use which::which;
 
 #[derive(Debug, thiserror::Error)]
 enum SshError {
-    #[error("SSH executable not found at environment with error {0}")]
+    #[error("SSH executable not found on environment with error `{0}`")]
     SshAppNotFound(#[from] which::Error),
 
-    #[error("SSH application spawn failed: {err}")]
+    #[error("SSH application spawn failed with error `{err}`")]
     SpawnFail {
         #[source]
         err: std::io::Error,
     },
 
-    #[error("SSH application spawn result wait failed: {err}")]
+    #[error("SSH application spawn result wait failed with error `{err}`")]
     SpawnWaitFail {
         #[source]
         err: std::io::Error,
     },
 
-    #[error("SSH command execute failed, context: {context}: exit code: {exit_code:?}, std error: {std_err:?}")]
+    #[error("SSH command execute failed, context `{context}`: exit code `{exit_code:?}`, std error output `{std_err:?}`")]
     CommandExecutionError {
         context: String,
         exit_code: Option<i32>,
         std_err: Option<String>,
     },
 
-    #[error("Parsing failed, context: {context} ,err: {err}")]
+    #[error("Parsing failed, context `{context}`, err `{err}`")]
     UTF8ParsingFailed {
         context: String,
         #[source]
         err: std::str::Utf8Error,
     },
 
-    #[error("Invalid target folder: {0}")]
+    #[error("Invalid target folder `{0}`")]
     InvalidTargetFolder(&'static str),
 
     #[error("Source file is missing or invalid path")]
@@ -53,6 +53,7 @@ enum SshError {
 
 ////////////////////////////////////////////////////////////////////////
 
+/// Контекст для работы SSH выгрузки
 struct SshExecuteInfo {
     ssh_executable_path: PathBuf,
     scp_executable_path: PathBuf,
@@ -60,10 +61,7 @@ struct SshExecuteInfo {
 }
 
 /// Выполняем ssh команду, ssh с установкой соединения выполняется каждый раз
-fn execute_ssh_command_with_output(
-    ssh_info: &SshExecuteInfo,
-    command: &str,
-) -> Result<String, SshError> {
+fn execute_ssh_command(ssh_info: &SshExecuteInfo, command: &str) -> Result<Output, SshError> {
     #[rustfmt::skip]
     let output = Command::new(&ssh_info.ssh_executable_path)
         .args([
@@ -77,7 +75,7 @@ fn execute_ssh_command_with_output(
         .spawn()
         .map_err(|err| SshError::SpawnFail{ err })?
         .wait_with_output()
-        .map_err(|err| SshError::SpawnWaitFail { err })?;
+        .map_err(|err| SshError::SpawnWaitFail{ err })?;
 
     // Нормально ли все отработало?
     if !output.status.success() {
@@ -94,6 +92,16 @@ fn execute_ssh_command_with_output(
         });
     }
 
+    Ok(output)
+}
+
+/// Выполняем ssh команду, ssh с установкой соединения выполняется каждый раз
+fn execute_ssh_command_string_output(
+    ssh_info: &SshExecuteInfo,
+    command: &str,
+) -> Result<String, SshError> {
+    let output = execute_ssh_command(ssh_info, command)?;
+
     // Парсим вывод stdout как текст UTF-8
     from_utf8(output.stdout.as_bytes())
         .map(|v| v.trim_end().to_owned())
@@ -104,38 +112,9 @@ fn execute_ssh_command_with_output(
 }
 
 /// Выполняем ssh команду, ssh с установкой соединения выполняется каждый раз
-fn execute_ssh_command(ssh_info: &SshExecuteInfo, command: &str) -> Result<(), SshError> {
-    #[rustfmt::skip]
-    let output = Command::new(&ssh_info.ssh_executable_path)
-        .args([
-            "-i", &ssh_info.env_params.key_file,
-            &format!("{}@{}", ssh_info.env_params.user, ssh_info.env_params.server),
-            command
-        ])
-        .stdin(Stdio::piped())  // Возможны проблемы на винде, поэтому всегда piped
-        .stdout(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
-        .stderr(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
-        .spawn()
-        .map_err(|err| SshError::SpawnFail{ err })?
-        .wait_with_output()
-        .map_err(|err| SshError::SpawnWaitFail { err })?;
-
-    // Нормально ли все отработало?
-    if output.status.success() {
-        Ok(())
-    } else {
-        // Парсим вывод stderr как текст UTF-8
-        let stderr_output = from_utf8(output.stderr.as_bytes())
-            .map(|v| v.to_owned())
-            .ok();
-
-        // Ошибка
-        Err(SshError::CommandExecutionError {
-            context: format!("Command `{}`", command),
-            exit_code: output.status.code(),
-            std_err: stderr_output,
-        })
-    }
+fn execute_ssh_command_no_output(ssh_info: &SshExecuteInfo, command: &str) -> Result<(), SshError> {
+    let _ = execute_ssh_command(ssh_info, command)?;
+    Ok(())
 }
 
 /// Получаем абсолютный пути к директории на сервере если был передан
@@ -155,7 +134,7 @@ fn get_remote_abs_path<'a>(
     else if input_path.starts_with("~/") {
         // Домашняя директория
         let home_path = {
-            let home_path_str = execute_ssh_command_with_output(ssh_info, "echo ~")?;
+            let home_path_str = execute_ssh_command_string_output(ssh_info, "echo ~")?;
             debug!("Home path: {home_path_str}");
             PathBuf::from(home_path_str)
         };
@@ -172,7 +151,7 @@ fn get_remote_abs_path<'a>(
 
 /// Создаем конкретную директорию для файлика на сервере
 fn create_result_folder(ssh_info: &SshExecuteInfo, path: &Path) -> Result<(), SshError> {
-    execute_ssh_command(ssh_info, &format!("mkdir -p {}", path.display()))
+    execute_ssh_command_no_output(ssh_info, &format!("mkdir -p {}", path.display()))
 }
 
 /// Выполняем копирование файлика на сервер с помощью утилиты scp

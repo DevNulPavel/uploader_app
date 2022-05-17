@@ -1,17 +1,8 @@
-use quick_error::{
-    quick_error
-};
-use tracing_error::{
-    SpanTrace
-};
-use super::{
-    responses::{
-        ErrorResponseValue,
-        SubmissionStatusResponse
-    }
-};
+use super::responses::{ErrorResponseValue, SubmissionStatusResponse};
+use quick_error::quick_error;
+use tracing_error::SpanTrace;
 
-quick_error!{
+quick_error! {
     #[derive(Debug)]
     pub enum MicrosoftAzureError{
         /// Ошибка парсинга контекста с дополнительной информацией того места, где произашла ошибка
@@ -57,6 +48,14 @@ quick_error!{
         NoFile(path: std::path::PathBuf){
         }
 
+        /// Проблема красивой записи размера
+        HumanSizeError(context: SpanTrace, info: String){
+        }
+
+        /// Не выгрузилось нормально на сервер
+        UploadingError(context: SpanTrace, info: String){
+        }
+
         /// Ошибка при открытии файлика
         ZipOpenFailed(err: zip::result::ZipError){
             from()
@@ -73,5 +72,10 @@ quick_error!{
         /// Получили какой-то кривой статус коммита
         CommitFailed(response_data: SubmissionStatusResponse){
         }
+
+        // /// Проблема с Mutex в корутине выгрузки
+        // MutexError{
+
+        // }
     }
 }

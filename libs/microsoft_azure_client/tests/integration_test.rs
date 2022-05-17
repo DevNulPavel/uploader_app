@@ -47,7 +47,7 @@ async fn library_integration_test(){
     let application_id = env::var("MICROSOFT_AZURE_STORE_ID").expect("Missing env variable");
 
     // Файлик выгрузки
-    let upload_file_path = Path::new("/Users/devnul/Downloads/MHouseXGen_5.30.1.0_Win32.appxupload");
+    let upload_file_path = Path::new("/Users/devnul/Downloads/MHouseXGen_5.161.0.0_Win32_TEST_UPLOAD.appxupload.zip");
 
     // Создаем HTTP клиента, можно спокойно клонировать, внутри Arc
     let http_client = Client::new();

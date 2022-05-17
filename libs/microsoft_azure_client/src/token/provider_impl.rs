@@ -1,80 +1,51 @@
-use std::{
-    sync::{
-        Arc,
-        Mutex
-    },
-    time::{
-        Duration
-    }
-};
-use async_trait::{
-    async_trait
-};
-use tracing::{
-    // info,
-    debug
-};
-use reqwest::{
-    Client,
-    header::{
-        CONTENT_TYPE
-    }
-};
-use url::{
-    Url
-};
+use super::{provider_trait::TokenProvider, token::Token};
 use crate::{
-    error::{
-        MicrosoftAzureError
-    },
-    responses::{
-        DataOrErrorResponse,
-        TokenResponse
-    }
+    error::MicrosoftAzureError,
+    responses::{DataOrErrorResponse, TokenResponse},
 };
-use super::{
-    token::{
-        Token
-    },
-    provider_trait::{
-        TokenProvider
-    }
+use async_trait::async_trait;
+use reqwest::{header::CONTENT_TYPE, Client};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
 };
+use tracing::debug;
+use url::Url;
 
 ////////////////////////////////////////////////////////////////
 
 /// Внутренняя структура, содержащая общие переменные для запроса и сброса токена
 #[derive(Debug)]
 struct InnerData {
-    http_client: Client,  // ArcInside
+    http_client: Client, // ArcInside
     token_api_url: Url,
     client_id: String,
     client_secret: String,
-    token_expire_pre_delay: Duration
+    token_expire_pre_delay: Duration,
 }
 
 ////////////////////////////////////////////////////////////////
 
-/// Данный провайдер запрашивает токен, выдает его наружу, 
+/// Данный провайдер запрашивает токен, выдает его наружу,
 /// если токен истекает через 5 минут, тогда перезапрашивает его самостоятельно.
 /// Автоматически обновляя его внутри
 #[derive(Debug)]
-pub struct TokenProviderDefault{
+pub struct TokenProviderDefault {
     inner: Arc<InnerData>,
-    active_token: Arc<Mutex<Option<Token>>>
+    active_token: Arc<Mutex<Option<Token>>>,
 }
 
 impl Clone for TokenProviderDefault {
     fn clone(&self) -> Self {
-        TokenProviderDefault{
+        TokenProviderDefault {
             inner: self.inner.clone(),
-            active_token: self.active_token.clone()
+            active_token: self.active_token.clone(),
         }
     }
 }
 
 #[async_trait(?Send)]
-impl TokenProvider for TokenProviderDefault{
+impl TokenProvider for TokenProviderDefault {
     /// Отдаваемое значение токена нужно сразу же использовать, а не сохранять где-то
     /// Так как токен короткоживущий и обновляется внутри при необходимости
     /// токен отдается в виде Arc, чтобы не делать бессмысленных копирований памяти
@@ -82,27 +53,26 @@ impl TokenProvider for TokenProviderDefault{
         // TODO: Как-то сделать лучше
 
         // Делаем некую машину состояний, чтобы вернуть валидный рабочий токен после всех проверок
-        let mut token_guard = self.active_token
-            .lock()
-            .expect("Token mutex lock failed");
-        loop{
+        let mut token_guard = self.active_token.lock().expect("Token mutex lock failed");
+        loop {
             match token_guard.as_ref() {
                 // Если токен не заканчивает время жизни через указанную задержку, то все норм
                 // Иначе все делаем сброс
-                Some(token) if (token.is_will_be_expired_soon(self.inner.token_expire_pre_delay) == false) => {
+                Some(token)
+                    if (token.is_will_be_expired_soon(self.inner.token_expire_pre_delay)
+                        == false) =>
+                {
                     //debug!("Token is OK");
 
                     // Все нормально, возвращаем склонированное значение токена
                     // Клонировать приходится, так как иначе придется долго держать блокировку
                     return Ok(token.get_token_value());
-                },
+                }
                 _ => {
                     debug!("Token will be expired soon or missing, refresh it");
 
                     // Вызываем снова запрос токена
-                    let new_token = self
-                        .request_azure_token()
-                        .await?;
+                    let new_token = self.request_azure_token().await?;
 
                     // После установки идем на очередную итерацию цикла
                     token_guard.replace(new_token);
@@ -114,46 +84,51 @@ impl TokenProvider for TokenProviderDefault{
 }
 
 impl TokenProviderDefault {
-    pub fn new<D>(http_client: Client,
-                  tenant_id: D,
-                  client_id: String,
-                  client_secret: String) -> Result<TokenProviderDefault, MicrosoftAzureError>       
-    where 
-        D: std::fmt::Display 
+    pub fn new<D>(
+        http_client: Client,
+        tenant_id: D,
+        client_id: String,
+        client_secret: String,
+    ) -> Result<TokenProviderDefault, MicrosoftAzureError>
+    where
+        D: std::fmt::Display,
     {
-        Self::new_custom(http_client, 
-                         "https://login.microsoftonline.com", 
-                         tenant_id, 
-                         client_id, 
-                         client_secret, 
-                         Duration::from_secs(60 * 3))
+        Self::new_custom(
+            http_client,
+            "https://login.microsoftonline.com",
+            tenant_id,
+            client_id,
+            client_secret,
+            Duration::from_secs(60 * 3),
+        )
     }
 
-    fn new_custom<D>(http_client: Client,
-                     api_url: &str,
-                     tenant_id: D,
-                     client_id: String,
-                     client_secret: String,
-                     token_expire_pre_delay: Duration) -> Result<TokenProviderDefault, MicrosoftAzureError> 
-    where 
-        D: std::fmt::Display 
+    fn new_custom<D>(
+        http_client: Client,
+        api_url: &str,
+        tenant_id: D,
+        client_id: String,
+        client_secret: String,
+        token_expire_pre_delay: Duration,
+    ) -> Result<TokenProviderDefault, MicrosoftAzureError>
+    where
+        D: std::fmt::Display,
     {
-        let token_api_url = Url::parse(api_url)?
-            .join(&format!("{}/oauth2/token", tenant_id))?;
+        let token_api_url = Url::parse(api_url)?.join(&format!("{}/oauth2/token", tenant_id))?;
 
         // Создаем Arc на получателя токена
-        let inner = Arc::new(InnerData{
+        let inner = Arc::new(InnerData {
             http_client,
             token_api_url,
             client_id,
             client_secret,
-            token_expire_pre_delay
+            token_expire_pre_delay,
         });
 
         // Создаем нашу структуру, изначально токен пустой
-        Ok(TokenProviderDefault{
+        Ok(TokenProviderDefault {
             inner,
-            active_token: Default::default()
+            active_token: Default::default(),
         })
     }
 
@@ -171,10 +146,15 @@ impl TokenProviderDefault {
         });
 
         // Запрос
-        let result = self.inner.http_client
+        let result = self
+            .inner
+            .http_client
             .post(self.inner.token_api_url.clone())
             //.query(&query_params)
-            .header(CONTENT_TYPE, "application/x-www-form-urlencoded; charset=utf-8")
+            .header(
+                CONTENT_TYPE,
+                "application/x-www-form-urlencoded; charset=utf-8",
+            )
             .form(&form_params)
             .send()
             .await?

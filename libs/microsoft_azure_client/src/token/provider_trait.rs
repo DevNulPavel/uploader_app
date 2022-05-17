@@ -1,19 +1,6 @@
-use std::{
-    fmt::{
-        Debug
-    }, 
-    sync::{
-        Arc
-    }
-};
-use async_trait::{
-    async_trait
-};
-use crate::{
-    error::{
-        MicrosoftAzureError
-    }
-};
+use crate::error::MicrosoftAzureError;
+use async_trait::async_trait;
+use std::{fmt::Debug, sync::Arc};
 
 #[async_trait(?Send)]
 pub trait TokenProvider: Debug {

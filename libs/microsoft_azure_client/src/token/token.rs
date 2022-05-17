@@ -1,44 +1,31 @@
 use std::{
-    sync::{
-        Arc
-    },
-    time::{
-        Instant,
-        Duration
-    },
-    ops::{
-        Add,
-        Sub
-    }
+    ops::{Add, Sub},
+    sync::Arc,
+    time::{Duration, Instant},
 };
 // use log::{
 //     // info,
 //     debug
 // };
-use crate::{
-    responses::{
-        TokenResponse
-    }
-};
+use crate::responses::TokenResponse;
 
 ////////////////////////////////////////////////////////////////
 
 /// Внутренняя структура, которая содержит в себе токен, а так же время окончания его жизни
 #[derive(Debug)]
-pub struct Token{
+pub struct Token {
     access_token: Arc<String>,
     // refresh_token: String,
-    complete_time: Instant
+    complete_time: Instant,
 }
 
 impl From<TokenResponse> for Token {
     fn from(resp: TokenResponse) -> Self {
-        let complete_time = Instant::now()
-            .add(Duration::from_secs(resp.expires_in));
-        Token{
+        let complete_time = Instant::now().add(Duration::from_secs(resp.expires_in));
+        Token {
             access_token: Arc::new(resp.access_token),
             // refresh_token: resp.refresh_token,
-            complete_time
+            complete_time,
         }
     }
 }
@@ -47,17 +34,15 @@ impl Token {
     /// Проверяем, что время жизни истекает скоро, при этом учитываем предзадержку
     pub fn is_will_be_expired_soon(&self, pre_delay: Duration) -> bool {
         let complete_time_val = self.complete_time.sub(pre_delay);
-        Instant::now()
-            .gt(&complete_time_val)
+        Instant::now().gt(&complete_time_val)
     }
 
-    pub fn get_token_value(&self) -> Arc<String>{
+    pub fn get_token_value(&self) -> Arc<String> {
         self.access_token.clone()
     }
 }
 
 ////////////////////////////////////////////////////////////////
-
 
 ////////////////////////////////////////////////////////////////
 
@@ -167,10 +152,10 @@ mod tests{
                     .body(response_text);
             });
 
-        let token_provider = MicrosoftAzureTokenProvider::new_custom(reqwest::Client::new(), 
-                                                                     &server_url, 
-                                                                     TENANT_ID, 
-                                                                     CLIENT_ID.to_owned(), 
+        let token_provider = MicrosoftAzureTokenProvider::new_custom(reqwest::Client::new(),
+                                                                     &server_url,
+                                                                     TENANT_ID,
+                                                                     CLIENT_ID.to_owned(),
                                                                      CLIENT_SECRET.to_owned(),
                                                                      Duration::from_secs(5))
             .expect("Token provider create failed");

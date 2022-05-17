@@ -1,4 +1,4 @@
-use super::{provider_trait::TokenProvider, token::Token};
+use super::{provider_trait::TokenProvider, token_struct::Token};
 use crate::{
     error::MicrosoftAzureError,
     responses::{DataOrErrorResponse, TokenResponse},
@@ -59,8 +59,7 @@ impl TokenProvider for TokenProviderDefault {
                 // Если токен не заканчивает время жизни через указанную задержку, то все норм
                 // Иначе все делаем сброс
                 Some(token)
-                    if (token.is_will_be_expired_soon(self.inner.token_expire_pre_delay)
-                        == false) =>
+                    if !token.is_will_be_expired_soon(self.inner.token_expire_pre_delay) =>
                 {
                     //debug!("Token is OK");
 

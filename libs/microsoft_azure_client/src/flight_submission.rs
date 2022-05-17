@@ -1,15 +1,3 @@
-use bytes::Bytes;
-use humansize::FileSize;
-use serde_json::json;
-use std::path::Path;
-use tokio::time;
-use tokio::{fs::File, io::AsyncReadExt};
-use tracing::debug;
-use tracing::{instrument, warn};
-use tracing_error::SpanTrace;
-// use serde_json::{
-//     json
-// };
 use crate::{
     error::MicrosoftAzureError,
     helpers::check_file_extention,
@@ -19,6 +7,13 @@ use crate::{
         FlightSubmissionCommitResponse, FlightSubmissionsCreateResponse, SubmissionStatusResponse,
     },
 };
+use bytes::Bytes;
+use humansize::FileSize;
+use serde_json::json;
+use std::path::Path;
+use tokio::{fs::File, io::AsyncReadExt, sync::mpsc, time};
+use tracing::{debug, instrument, warn, Instrument};
+use tracing_error::SpanTrace;
 
 /// Внутренняя структура по работе с submission
 pub struct FlightSubmission {
@@ -31,6 +26,8 @@ impl FlightSubmission {
     #[instrument(skip(request_builder))]
     pub async fn start_new(
         request_builder: RequestBuilder,
+        groups: &[&str],
+        test_flight_name: &str,
     ) -> Result<FlightSubmission, MicrosoftAzureError> {
         // Выполняем запрос создания нового сабмишена
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/create-a-flight
@@ -39,17 +36,18 @@ impl FlightSubmission {
             .method(reqwest::Method::POST)
             .join_path("flights".to_owned())
             .build()
+            .in_current_span()
             .await?
             .json(&json!({
-                "groupIds": [
-                    "1152921504607280735", // TODO: ???
-                ],
-                "friendlyName": "Test_submission_API", // TODO: ???
+                "groupIds": groups,
+                "friendlyName": test_flight_name,
                 // "rankHigherThan": null
             }))
             .send()
+            .in_current_span()
             .await?
             .json::<DataOrErrorResponse<FlightCreateResponse>>()
+            .in_current_span()
             .await?
             .into_result()?;
         debug!(
@@ -62,30 +60,18 @@ impl FlightSubmission {
             .clone()
             .flight_id(new_flight_info.flight_id.clone());
 
-        /*// Создаем новую flight submission
-        let new_submission_info = request_builder
-            .clone()
-            .method(reqwest::Method::POST)
-            .join_path("submissions".to_owned())
-            .build()
-            .await?
-            .header(reqwest::header::CONTENT_LENGTH, "0")
-            .send()
-            .await?
-            .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
-            .await?
-            .into_result()?;
-        debug!("Microsoft Azure, new flight submission response: {:#?}", new_submission_info);*/
-
         // Получим информацию для данного flightId
         let flight_info = request_builder
             .clone()
             .method(reqwest::Method::GET)
             .build()
+            .in_current_span()
             .await?
             .send()
+            .in_current_span()
             .await?
             .json::<DataOrErrorResponse<FlightInfoResponse>>()
+            .in_current_span()
             .await?
             .into_result()?;
         debug!("Microsoft Azure, flight info: {:#?}", flight_info);
@@ -113,10 +99,13 @@ impl FlightSubmission {
                 .submission_id(pending.id)
                 .method(reqwest::Method::GET)
                 .build()
+                .in_current_span()
                 .await?
                 .send()
+                .in_current_span()
                 .await?
                 .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
+                .in_current_span()
                 .await?
                 .into_result()?;
             debug!(
@@ -131,11 +120,14 @@ impl FlightSubmission {
                 .method(reqwest::Method::POST)
                 .join_path("submissions".to_owned())
                 .build()
+                .in_current_span()
                 .await?
                 .header(reqwest::header::CONTENT_LENGTH, 0)
                 .send()
+                .in_current_span()
                 .await?
                 .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
+                .in_current_span()
                 .await?
                 .into_result()?;
             debug!(
@@ -167,19 +159,13 @@ impl FlightSubmission {
         // https://docs.microsoft.com/en-us/rest/api/storageservices/put-blob
         // https://docs.microsoft.com/en-us/rest/api/storageservices/put-blob#remarks
         // https://stackoverflow.com/questions/58724878/upload-large-files-1-gb-to-azure-blob-storage-through-web-api
-        let blob_create_response = http_client
+        http_client
             .put(&self.data.file_upload_url)
             .header("x-ms-blob-type", "BlockBlob")
             .header(reqwest::header::CONTENT_LENGTH, "0")
             .send()
             .await?
-            .error_for_status()?
-            .text()
-            .await?;
-        debug!(
-            "Microsoft Azure: blob create response: {:?}",
-            blob_create_response
-        );
+            .error_for_status()?;
 
         // Создаем непосредственно урл для добавления данных
         let append_data_url = reqwest::Url::parse(&self.data.file_upload_url)?;
@@ -190,8 +176,10 @@ impl FlightSubmission {
         // Получаем суммарный размер данных
         let source_file_length = source_file.metadata().await?.len();
 
+        // Массив с результатами
         let mut blocks = Vec::<UploadResult>::new();
 
+        // Задача и результат выгрузки
         #[derive(Debug)]
         struct UploadTask {
             data: Bytes,
@@ -207,14 +195,13 @@ impl FlightSubmission {
         const UPLOAD_THREADS_COUNT: usize = 8;
         const BUFFER_MAX_SIZE: i64 = 1024 * 1024 * 8; // 8Mb - ограничение для отдельного куска
 
-        let (mut task_sender, task_receiver) =
-            tokio::sync::mpsc::channel::<UploadTask>(UPLOAD_THREADS_COUNT * 2);
-        let task_receiver = std::sync::Arc::new(tokio::sync::Mutex::new(task_receiver));
+        // Создаем каналы для задач и результатов
+        let (task_sender, task_receiver) =
+            async_channel::bounded::<UploadTask>(UPLOAD_THREADS_COUNT * 2);
+        let (result_sender, mut result_receiver) =
+            mpsc::channel::<Result<UploadResult, MicrosoftAzureError>>(UPLOAD_THREADS_COUNT * 8);
 
-        let (result_sender, mut result_receiver) = tokio::sync::mpsc::channel::<
-            Result<UploadResult, MicrosoftAzureError>,
-        >(UPLOAD_THREADS_COUNT * 8);
-
+        // Создаем воркеры для отгрузки
         for _ in 0..UPLOAD_THREADS_COUNT {
             let task_receiver = task_receiver.clone();
             let append_data_url = append_data_url.clone();
@@ -224,63 +211,57 @@ impl FlightSubmission {
             tokio::spawn(async move {
                 // Если делать: while let Some(task) = task_receiver.lock().await.recv().await
                 // Тогда блокировка висит во время всего выполнения цикла
-                loop {
-                    let task = task_receiver.lock().await.recv().await;
-                    if let Some(UploadTask {
+                while let Ok(task) = task_receiver.recv().await {
+                    let UploadTask {
                         data,
                         block_id,
                         index,
-                    }) = task
-                    {
-                        debug!("Start uploading for block index: {}", index);
+                    } = task;
 
-                        let mut url = append_data_url.clone();
-                        url.query_pairs_mut()
-                            .append_pair("comp", "block")
-                            .append_pair("blockid", &block_id);
+                    debug!("Start uploading for block index: {}", index);
 
-                        let data_size = data.len();
+                    let mut url = append_data_url.clone();
+                    url.query_pairs_mut()
+                        .append_pair("comp", "block")
+                        .append_pair("blockid", &block_id);
 
-                        let mut iter_count = 0;
-                        let result = loop {
-                            let upload_fn = async {
-                                // Непосредственно выгрузка
-                                http_client
-                                    .put(url.clone())
-                                    .header(reqwest::header::CONTENT_LENGTH, data_size)
-                                    .body(data.clone())
-                                    .send()
-                                    .await?
-                                    .error_for_status()?;
+                    let mut iter_count = 0;
+                    let result = loop {
+                        let upload_fn = async {
+                            // Непосредственно выгрузка
+                            http_client
+                                .put(url.clone())
+                                .header(reqwest::header::CONTENT_LENGTH, data.len())
+                                .body(data.clone())
+                                .send()
+                                .await?
+                                .error_for_status()?;
 
-                                Result::<UploadResult, MicrosoftAzureError>::Ok(UploadResult {
-                                    block_id: block_id.clone(),
-                                    index,
-                                })
-                            };
-
-                            let res = upload_fn.await;
-                            if res.is_ok() {
-                                break res;
-                            } else {
-                                iter_count += 1;
-                                if iter_count <= 3 {
-                                    warn!(
-                                        "Retry uploading for url: {}, iteration: {}, res: {:?}",
-                                        url, iter_count, res
-                                    );
-                                    tokio::time::delay_for(time::Duration::from_secs(3)).await;
-                                    continue;
-                                } else {
-                                    break res;
-                                }
-                            }
+                            Result::<UploadResult, MicrosoftAzureError>::Ok(UploadResult {
+                                block_id: block_id.clone(),
+                                index,
+                            })
                         };
-                        if result_sender.send(result).await.is_err() {
-                            return;
+
+                        let res = upload_fn.await;
+                        if res.is_ok() {
+                            break res;
+                        } else {
+                            iter_count += 1;
+                            if iter_count <= 3 {
+                                warn!(
+                                    "Retry uploading for url: {}, iteration: {}, res: {:?}",
+                                    url, iter_count, res
+                                );
+                                tokio::time::delay_for(time::Duration::from_secs(3)).await;
+                                continue;
+                            } else {
+                                break res;
+                            }
                         }
-                    } else {
-                        break;
+                    };
+                    if result_sender.send(result).await.is_err() {
+                        return;
                     }
                 }
             });
@@ -290,7 +271,6 @@ impl FlightSubmission {
 
         // Оставшийся размер выгрузки
         let mut data_left = source_file_length as i64;
-        // let mut data_offset: i64 = 0;
         let mut index = 0;
         loop {
             // Размер буффера
@@ -306,21 +286,13 @@ impl FlightSubmission {
             // Читаем из файлика данные в буффер
             let read_size = source_file.read_exact(&mut buffer).await?;
 
-            // trace!(
-            //     "Microsoft azure: bytes read from file {}",
-            //     read_size
-            //         .file_size(humansize::file_size_opts::BINARY)
-            //         .map_err(|err| {
-            //             MicrosoftAzureError::HumanSizeError(SpanTrace::capture(), err)
-            //         })?
-            // );
-
             // Отнимаем нужное значения размера данных
             data_left -= read_size as i64;
 
             // Обрезаем буффер на нужный размер
             buffer.truncate(read_size);
 
+            // Отправляем задачу выгрузки
             task_sender
                 .send(UploadTask {
                     data: Bytes::from(buffer),
@@ -335,6 +307,7 @@ impl FlightSubmission {
                     )
                 })?;
 
+            // +1 к индексу
             index += 1;
 
             // Может уже есть какие-то результаты, получим их тогда заранее
@@ -358,25 +331,34 @@ impl FlightSubmission {
             }
 
             debug!(
-                "Microsoft azure: bytes upload left {}",
+                "Microsoft azure: bytes upload progress {}/{}",
                 data_left
                     .file_size(humansize::file_size_opts::BINARY)
-                    .map_err(|err| {
-                        MicrosoftAzureError::HumanSizeError(SpanTrace::capture(), err)
-                    })?
+                    .map_err(|err| MicrosoftAzureError::HumanSizeError(
+                        SpanTrace::capture(),
+                        err
+                    ))?,
+                source_file_length
+                    .file_size(humansize::file_size_opts::BINARY)
+                    .map_err(|err| MicrosoftAzureError::HumanSizeError(
+                        SpanTrace::capture(),
+                        err
+                    ))?,
             );
         }
         drop(task_sender);
 
-        // Получаем накопленные результаты
+        // Получаем накопленные результаты, которые еще не получили
         while let Some(result) = result_receiver.recv().await {
             let result = result?;
             blocks.push(result);
         }
-        blocks.sort_by_key(|v| v.index);
         drop(result_receiver);
 
-        // Непосредственно выгрузка
+        // Теперь сортируем результаты дл правильного порядка следования
+        blocks.sort_by_key(|v| v.index);
+
+        // Непосредственно выгрузка списка в правильном порядке
         // https://docs.microsoft.com/en-us/rest/api/storageservices/put-block-list
         let data = {
             let mut data = String::from(r#"<?xml version="1.0" encoding="utf-8"?><BlockList>"#);
@@ -387,16 +369,16 @@ impl FlightSubmission {
             }
             data.push_str("</BlockList>");
             data
-            //   <Committed>first-base64-encoded-block-id</Committed>
-            //   <Uncommitted>second-base64-encoded-block-id</Uncommitted>
-            //   <Latest>third-base64-encoded-block-id</Latest>
-            //   ...
-            // </BlockList>"#;
         };
-        let mut url = append_data_url.clone();
-        url.query_pairs_mut().append_pair("comp", "blocklist");
+        let list_commit_url = {
+            let mut list_commit_url = append_data_url.clone();
+            list_commit_url
+                .query_pairs_mut()
+                .append_pair("comp", "blocklist");
+            list_commit_url
+        };
         http_client
-            .put(url)
+            .put(list_commit_url)
             .body(data)
             .send()
             .await?
@@ -608,6 +590,7 @@ impl FlightSubmission {
         Ok(())
     }
 
+    /// Выгружаем наш билд
     #[instrument(skip(self))]
     pub async fn upload_build(&mut self, zip_file_path: &Path) -> Result<(), MicrosoftAzureError> {
         // Может быть нет фалика по этому пути
@@ -621,7 +604,7 @@ impl FlightSubmission {
         }
 
         // Открываем zip файлик и получаем имя .appx там
-        let filename = {
+        let filename_in_zip = {
             let zip = zip::ZipArchive::new(std::fs::File::open(zip_file_path)?)?;
             let filename_in_zip = zip
                 .file_names()
@@ -636,12 +619,11 @@ impl FlightSubmission {
                         false
                     }
                 })
-                .ok_or(MicrosoftAzureError::NoAppxFileInZip)?;
-            debug!("Microsoft Azure: filename in zip {}", filename_in_zip);
-            filename_in_zip.to_owned() // TODO: не аллоцировать
+                .ok_or(MicrosoftAzureError::NoAppxFileInZip)?
+                .to_owned();
+            filename_in_zip
         };
-
-        // let filename = zip_file_path.file_name().and_then(|n| n.to_str()).unwrap();
+        debug!("Microsoft Azure: filename in zip {}", filename_in_zip);
 
         // Обновляем имя пакета
         self.data = self
@@ -649,11 +631,12 @@ impl FlightSubmission {
             .clone()
             .method(reqwest::Method::PUT)
             .build()
+            .in_current_span()
             .await?
             .json(&json!({
                 "flightPackages": [
                     {
-                      "fileName": filename,
+                      "fileName": filename_in_zip,
                       "fileStatus": "PendingUpload",
                       "minimumDirectXVersion": "None",
                       "minimumSystemRam": "None"
@@ -663,63 +646,24 @@ impl FlightSubmission {
                 // "notesForCertification": "No special steps are required for certification of this app."
             }))
             .send()
+            .in_current_span()
             .await?
             .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
+            .in_current_span()
             .await?
             .into_result()?;
         debug!("Microsoft Azure: update response {:#?}", self.data);
 
         // Выполняем непосредственно выгрузку на сервер нашего архива
-        self.perform_file_uploading(zip_file_path).await?;
-
-        self.data = self
-            .request_builder
-            .clone()
-            .method(reqwest::Method::GET)
-            .build()
-            .await?
-            .header(reqwest::header::CONTENT_LENGTH, "0")
-            .send()
-            .await?
-            .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
-            .await?
-            .into_result()?;
-        debug!(
-            "Microsoft Azure: update response after upload {:#?}",
-            self.data
-        );
-
-        // Обновляем имя пакета
-        /*self.data = self
-            .request_builder
-            .clone()
-            .method(reqwest::Method::PUT)
-            .build()
-            .await?
-            .json(&json!({
-                "flightPackages": [
-                    {
-                      "fileName": filename,
-                      "fileStatus": "Uploaded",
-                      "minimumDirectXVersion": "None",
-                      "minimumSystemRam": "None"
-                    }
-                ],
-                "targetPublishMode": "Manual",
-                // "notesForCertification": "No special steps are required for certification of this app."
-            }))
-            .send()
-            .await?
-            .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
-            .await?
-            .into_result()?;
-        debug!("Microsoft Azure: update response {:#?}", self.data);*/
+        self.perform_file_uploading(zip_file_path)
+            .in_current_span()
+            .await?;
 
         // Пытаемся закоммитить
-        self.commit_changes().await?;
+        self.commit_changes().in_current_span().await?;
 
         // Ждем завершения коммита
-        self.wait_commit_finished().await?;
+        self.wait_commit_finished().in_current_span().await?;
 
         Ok(())
     }

@@ -23,6 +23,7 @@ async-trait = "0.1.48"
 bytes = "0.5.6"
 zip = "0.5"
 humansize = "1.1.0"
+async-channel = "1.6"
 tokio = {version="0.2.24", default-features = false, features = ["fs", "io-util", "rt-util"]}
 tokio-util = {version = "0.3.1", features = ["codec"]}
 

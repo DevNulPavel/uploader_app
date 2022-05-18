@@ -20,11 +20,11 @@ pub struct FlightSubmission {
 
 impl FlightSubmission {
     /// Инициализируем новый экземпляр выливки
-    #[instrument(skip(request_builder))]
+    #[instrument(skip(request_builder, groups, test_flight_name))]
     pub async fn start_new(
         request_builder: RequestBuilder,
-        groups: &[&str],
-        test_flight_name: &str,
+        groups: Vec<String>,
+        test_flight_name: String,
     ) -> Result<FlightSubmission, MicrosoftAzureError> {
         // Выполняем запрос создания нового сабмишена
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/create-a-flight
@@ -358,7 +358,7 @@ impl FlightSubmission {
 
         // Открываем zip файлик и получаем имя .appx там
         let filename_in_zip = {
-            let zip = zip::ZipArchive::new(std::fs::File::open(zip_file_path)?)?;
+            let zip = zip::ZipArchive::new(std::fs::File::open(&zip_file_path)?)?;
             let filename_in_zip = zip
                 .file_names()
                 .find(|full_path_str| {
@@ -412,7 +412,7 @@ impl FlightSubmission {
         // Создаем непосредственно урл для добавления данных
         let append_data_url = reqwest::Url::parse(&self.data.file_upload_url)?;
         // Выполняем непосредственно выгрузку на сервер нашего архива
-        perform_file_uploading(http_client, append_data_url, zip_file_path)
+        perform_file_uploading(&http_client, &append_data_url, zip_file_path)
             .in_current_span()
             .await?;
 

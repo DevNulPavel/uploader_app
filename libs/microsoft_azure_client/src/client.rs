@@ -35,12 +35,12 @@ impl MicrosoftAzureClient {
     }
 
     /// Непосредственно выгружаем архив с билдом
-    #[instrument(skip(self, zip_upload_file_path))]
+    #[instrument(skip(self, zip_upload_file_path, groups, test_flight_name))]
     pub async fn upload_production_build(
         &self,
         zip_upload_file_path: &Path,
-        groups: &[&str],
-        test_flight_name: &str,
+        groups: Vec<String>,
+        test_flight_name: String,
     ) -> Result<(), MicrosoftAzureError> {
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/manage-flights
         // https://docs.microsoft.com/en-us/windows/uwp/monetize/python-code-examples-for-the-windows-store-submission-api

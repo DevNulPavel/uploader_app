@@ -1,32 +1,25 @@
 use std::{
-    sync::{
-        Once
-    },
-    env::{
-        self
-    },
-    path::{
-        Path
-    }
+    env::{self},
+    path::Path,
+    sync::Once,
 };
 // use log::{
-    // debug,
-    // info
+// debug,
+// info
 // };
-use reqwest::{
-    Client
-};
-use microsoft_azure_client::{
-    MicrosoftAzureClient
-};
+use microsoft_azure_client::MicrosoftAzureClient;
+use reqwest::Client;
 
 fn setup_logs() {
     static ONCE: Once = Once::new();
-    ONCE.call_once(||{
-        if std::env::var("RUST_LOG").is_err(){
+    ONCE.call_once(|| {
+        if std::env::var("RUST_LOG").is_err() {
             // export RUST_LOG=reqwest=trace
             // unset RUST_LOG
-            std::env::set_var("RUST_LOG", "microsoft_azure_client=trace,integration_test=trace,reqwest=trace");
+            std::env::set_var(
+                "RUST_LOG",
+                "microsoft_azure_client=trace,integration_test=trace,reqwest=trace",
+            );
         }
         std::env::set_var("RUST_LOG_STYLE", "auto");
         env_logger::builder()
@@ -37,7 +30,7 @@ fn setup_logs() {
 }
 
 #[tokio::test]
-async fn library_integration_test(){
+async fn library_integration_test() {
     setup_logs();
 
     // Переменные окружения
@@ -47,21 +40,23 @@ async fn library_integration_test(){
     let application_id = env::var("MICROSOFT_AZURE_STORE_ID").expect("Missing env variable");
 
     // Файлик выгрузки
-    let upload_file_path = Path::new("/Users/devnul/Downloads/MHouseXGen_5.161.0.0_Win32_TEST_UPLOAD.appxupload.zip");
-    let groups = &[
-        "1152921504607280735"
-    ];
-    let test_flight_name = "";
+    let upload_file_path =
+        Path::new("/Users/devnul/Downloads/MHouseXGen_5.161.0.0_Win32_TEST_UPLOAD.appxupload.zip");
+    let groups = vec!["1152921504607280735".to_owned()];
+    let test_flight_name = "Flight name".to_owned();
 
     // Создаем HTTP клиента, можно спокойно клонировать, внутри Arc
     let http_client = Client::new();
 
     // Создаем клиента
-    let client = MicrosoftAzureClient::new(http_client, 
-                                           tenant_id, 
-                                           client_id, 
-                                           client_secret, 
-                                           application_id).expect("Client create failed");
+    let client = MicrosoftAzureClient::new(
+        http_client,
+        tenant_id,
+        client_id,
+        client_secret,
+        application_id,
+    )
+    .expect("Client create failed");
 
     // Делавем попытку выгрузки
     client

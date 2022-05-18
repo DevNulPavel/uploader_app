@@ -4,6 +4,7 @@ mod google_drive;
 mod google_play;
 mod ios;
 mod upload_result;
+mod windows_store;
 
 #[cfg(target_family = "unix")]
 #[path = "ssh_unix.rs"]

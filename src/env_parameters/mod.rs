@@ -59,6 +59,7 @@ describe_env_values!(
     google_play: GooglePlayEnvironment,
     google_drive: GoogleDriveEnvironment,
     ios: IOSEnvironment,
+    windows: WindowsStoreEnvironment,
     ssh: SSHEnvironment,
     target_slack: TargetSlackEnvironment,
     result_slack: ResultSlackEnvironment

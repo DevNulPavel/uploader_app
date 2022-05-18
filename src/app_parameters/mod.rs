@@ -28,6 +28,7 @@ pub struct AppParameters{
     pub goolge_drive: Option<GoogleDriveParams>,
     pub goolge_play: Option<GooglePlayParams>,
     pub ios: Option<IOSParams>,
+    pub windows: Option<WindowsStoreParams>,
     pub ssh: Option<SSHParams>,
     pub slack: Option<SlackParams>,
 }
@@ -43,6 +44,7 @@ impl AppParameters{
             .args(&GoogleDriveParams::get_args())
             .args(&GooglePlayParams::get_args())
             .args(&IOSParams::get_args())
+            .args(&WindowsStoreParams::get_args())
             .args(&SSHParams::get_args())
             .args(&SlackParams::get_args());
     
@@ -66,6 +68,7 @@ impl AppParameters{
             goolge_drive: GoogleDriveParams::parse(&matches),
             goolge_play: GooglePlayParams::parse(&matches),
             ios: IOSParams::parse(&matches),
+            windows: WindowsStoreParams::parse(&matches),
             ssh: SSHParams::parse(&matches),
             slack: SlackParams::parse(&matches)
         }

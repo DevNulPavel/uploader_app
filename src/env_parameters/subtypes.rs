@@ -1,15 +1,11 @@
-use std::{
-    env::{
-        var
-    }
-};
+use std::env::var;
 
 /////////////////////////////////////////////////
 
 env_params_type!(
     GitEnvironment{
         Req{
-            git_branch: "GIT_BRANCH", 
+            git_branch: "GIT_BRANCH",
             git_commit: "GIT_COMMIT"
         }
     }
@@ -20,7 +16,7 @@ env_params_type!(
 env_params_type!(
     AmazonEnvironment{
         Req{
-            client_id: "AMAZON_CLIENT_ID", 
+            client_id: "AMAZON_CLIENT_ID",
             client_secret: "AMAZON_CLIENT_SECRET",
             app_id: "AMAZON_APP_ID"
         }
@@ -79,11 +75,24 @@ env_params_type!(
 /////////////////////////////////////////////////
 
 env_params_type!(
+    WindowsStoreEnvironment{
+        Req{
+            tenant_id: "MICROSOFT_AZURE_TENANT_ID",
+            client_id: "MICROSOFT_AZURE_CLIENT_ID",
+            secret_key: "MICROSOFT_AZURE_SECRET_KEY",
+            app_id: "MICROSOFT_AZURE_APP_ID"
+        }
+    }
+);
+
+/////////////////////////////////////////////////
+
+env_params_type!(
     SSHEnvironment{
         Req{
             server: "SSH_SERVER",
             user: "SSH_USER",
-            key_file: "SSH_PRIVATE_KEY_PATH" 
+            key_file: "SSH_PRIVATE_KEY_PATH"
         }
     }
 );

@@ -9,7 +9,7 @@ use self::{
     result_senders::{ResultSender, SlackResultSender, TerminalSender},
     uploaders::{
         upload_by_ssh, upload_in_amazon, upload_in_app_center, upload_in_google_drive,
-        upload_in_google_play, upload_in_ios, UploadResult,
+        upload_in_google_play, upload_in_ios, upload_in_windows_store, UploadResult,
     },
 };
 use futures::future::{join_all, select_all, Future, FutureExt};
@@ -35,9 +35,7 @@ where
             match res {
                 Ok(res) => {
                     // Пишем во все получатели асинхронно
-                    let futures_iter = result_senders
-                        .iter()
-                        .map(|sender| sender.send_result(&res));
+                    let futures_iter = result_senders.iter().map(|sender| sender.send_result(&res));
                     join_all(futures_iter).await;
                 }
                 Err(err) => {
@@ -124,7 +122,7 @@ fn build_uploaders(
 
     // Создаем задачу выгрузки в Amazon
     if let (Some(env_params), Some(app_params)) = (env_params.amazon, app_parameters.amazon) {
-        let fut = upload_in_amazon(http_client, env_params, app_params).boxed();
+        let fut = upload_in_amazon(http_client.clone(), env_params, app_params).boxed();
         info!("Google play uploading task created");
         active_workers.push(fut);
     }
@@ -133,6 +131,13 @@ fn build_uploaders(
     if let (Some(env_params), Some(app_params)) = (env_params.ios, app_parameters.ios) {
         let fut = upload_in_ios(env_params, app_params).boxed();
         info!("IOS uploading task created");
+        active_workers.push(fut);
+    }
+
+    // Создаем задачу выгрузки в IOS
+    if let (Some(env_params), Some(app_params)) = (env_params.windows, app_parameters.windows) {
+        let fut = upload_in_windows_store(http_client, env_params, app_params).boxed();
+        info!("Windows store uploading task created");
         active_workers.push(fut);
     }
 

@@ -10,8 +10,9 @@ source env/test_environment.env
 
 # Rust environment setup
 export RUST_BACKTRACE=1
-export RUST_LOG=debug
+# export RUST_LOG=debug
 # export RUST_LOG=uploader_app=debug,google_drive_client=debug
+export RUST_LOG=uploader_app=debug,microsoft_azure_client=debug
 # export RUST_LOG=uploader_app=trace,app_center_client=trace,google_drive_client=trace,reqwest=trace
 
 # App center
@@ -39,7 +40,14 @@ export RUST_LOG=debug
 # target/debug/uploader_app "${UPLOAD_PARAMS[@]}"
 
 # SSH
+# UPLOAD_PARAMS=()
+# UPLOAD_PARAMS+=(--ssh_target_server_dir '~/test_folder')
+# UPLOAD_PARAMS+=(--ssh_upload_files '/Users/devnul/projects/uploader_app_src/Makefile')
+# target/debug/uploader_app "${UPLOAD_PARAMS[@]}"
+
+# Microsoft store
 UPLOAD_PARAMS=()
-UPLOAD_PARAMS+=(--ssh_target_server_dir '~/test_folder')
-UPLOAD_PARAMS+=(--ssh_upload_files '/Users/devnul/projects/uploader_app_src/Makefile')
+UPLOAD_PARAMS+=(--windows_zip_file_path '/Users/devnul/Downloads/MHouseXGen_5.161.0.0_Win32_TEST_UPLOAD.appxupload.zip')
+UPLOAD_PARAMS+=(--windows_flight_groups '1152921504607280735')
+# UPLOAD_PARAMS+=(--windows_test_flight_name 'Flight name test')
 target/debug/uploader_app "${UPLOAD_PARAMS[@]}"

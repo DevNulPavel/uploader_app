@@ -1,5 +1,4 @@
-mod provider_impl;
-mod provider_trait;
+mod provider;
 mod token_struct;
 
-pub use self::{provider_impl::TokenProviderDefault, provider_trait::TokenProvider};
+pub use self::provider::TokenProvider;

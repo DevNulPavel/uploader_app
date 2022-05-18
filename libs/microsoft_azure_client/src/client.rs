@@ -1,6 +1,6 @@
 use crate::{
     error::MicrosoftAzureError, flight_submission::FlightSubmission,
-    request_builder::RequestBuilder, token::TokenProviderDefault,
+    request_builder::RequestBuilder, token::TokenProvider,
 };
 use reqwest::Client;
 use std::path::Path;
@@ -21,12 +21,8 @@ impl MicrosoftAzureClient {
         application_id: String,
     ) -> Result<MicrosoftAzureClient, MicrosoftAzureError> {
         // Создаем провайдер токена
-        let token_provider = Box::new(TokenProviderDefault::new(
-            http_client.clone(),
-            tenant_id,
-            client_id,
-            client_secret,
-        )?);
+        let token_provider =
+            TokenProvider::new(http_client.clone(), tenant_id, client_id, client_secret)?;
 
         // Уже с провайдером токенов создаем билдер запросов
         let request_builder = RequestBuilder::new(http_client, token_provider, application_id);

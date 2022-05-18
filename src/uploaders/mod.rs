@@ -21,5 +21,6 @@ pub use self::{
     google_play::upload_in_google_play,
     ios::upload_in_ios,
     ssh::upload_by_ssh,
+    windows_store::upload_in_windows_store,
     upload_result::{UploadResult, UploadResultData},
 };

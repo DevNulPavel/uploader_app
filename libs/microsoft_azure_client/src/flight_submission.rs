@@ -344,7 +344,7 @@ impl FlightSubmission {
     }
 
     /// Выгружаем наш билд
-    #[instrument(skip(self))]
+    #[instrument(skip(self, zip_file_path))]
     pub async fn upload_build(&mut self, zip_file_path: &Path) -> Result<(), MicrosoftAzureError> {
         // Может быть нет фалика по этому пути
         if !zip_file_path.exists() {

@@ -76,7 +76,9 @@ params_data_type!(
 params_data_type!(
     WindowsStoreParams{
         Req{
-            zip_file_path : "windows_zip_file_path" : "ZIP file with .appx or .appxupload inside",
+            zip_file_path : "windows_zip_file_path" : "ZIP file with .appx or .appxupload inside"
+        }
+        Opt{
             test_flight_name : "windows_test_flight_name": "Test flight name in admin console"
         }
         Mult {

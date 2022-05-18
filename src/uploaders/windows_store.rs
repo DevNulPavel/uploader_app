@@ -28,12 +28,17 @@ pub async fn upload_in_windows_store(
     // Файлик выгрузки
     let upload_file_path = Path::new(&app_params.zip_file_path);
 
+    let flight_name = match app_params.test_flight_name {
+        Some(name) => name,
+        None => format!("Test (UTC: {})", chrono::Utc::now().format("%Y-%m-%d %H:%M"))
+    };
+
     // Делавем попытку выгрузки
     client
         .upload_production_build(
             upload_file_path,
             app_params.test_groups,
-            app_params.test_flight_name,
+            flight_name,
         )
         .await
         .expect("Upload failed");

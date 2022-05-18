@@ -19,7 +19,7 @@ pub async fn upload_in_windows_store(
         env_params.tenant_id,
         env_params.client_id,
         env_params.secret_key,
-        env_params.app_id,
+        app_params.app_id,
     )
     .tap_err(|err| {
         error!("Microsoft Azure client create failed with error: {}", err);

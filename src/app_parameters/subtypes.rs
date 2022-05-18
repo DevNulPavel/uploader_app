@@ -76,6 +76,7 @@ params_data_type!(
 params_data_type!(
     WindowsStoreParams{
         Req{
+            app_id: "windows_app_id" : "Application ID",
             zip_file_path : "windows_zip_file_path" : "ZIP file with .appx or .appxupload inside"
         }
         Opt{

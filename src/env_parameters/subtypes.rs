@@ -79,8 +79,7 @@ env_params_type!(
         Req{
             tenant_id: "MICROSOFT_AZURE_TENANT_ID",
             client_id: "MICROSOFT_AZURE_CLIENT_ID",
-            secret_key: "MICROSOFT_AZURE_SECRET_KEY",
-            app_id: "MICROSOFT_AZURE_APP_ID"
+            secret_key: "MICROSOFT_AZURE_SECRET_KEY"
         }
     }
 );

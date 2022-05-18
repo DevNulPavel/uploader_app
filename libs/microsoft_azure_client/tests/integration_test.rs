@@ -37,9 +37,9 @@ async fn library_integration_test() {
     let tenant_id = env::var("MICROSOFT_AZURE_TENANT_ID").expect("Missing env variable");
     let client_id = env::var("MICROSOFT_AZURE_CLIENT_ID").expect("Missing env variable");
     let client_secret = env::var("MICROSOFT_AZURE_SECRET_KEY").expect("Missing env variable");
-    let application_id = env::var("MICROSOFT_AZURE_APP_ID").expect("Missing env variable");
 
     // Файлик выгрузки
+    let application_id = "9PBPBN166FXW".to_owned();
     let upload_file_path =
         Path::new("/Users/devnul/Downloads/MHouseXGen_5.161.0.0_Win32_TEST_UPLOAD.appxupload.zip");
     let groups = vec!["1152921504607280735".to_owned()];

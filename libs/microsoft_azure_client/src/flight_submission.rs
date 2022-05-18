@@ -357,11 +357,11 @@ impl FlightSubmission {
         }
 
         // Открываем zip файлик и получаем имя .appx там
-        let filename_in_zip = {
+        let filenames_in_zip = {
             let zip = zip::ZipArchive::new(std::fs::File::open(&zip_file_path)?)?;
-            let filename_in_zip = zip
+            let filenames_in_zip: Vec<_> = zip
                 .file_names()
-                .find(|full_path_str| {
+                .filter(|full_path_str| {
                     let file_name = std::path::Path::new(full_path_str)
                         .file_name()
                         .and_then(|f| f.to_str());
@@ -372,11 +372,25 @@ impl FlightSubmission {
                         false
                     }
                 })
-                .ok_or(MicrosoftAzureError::NoAppxFileInZip)?
-                .to_owned();
-            filename_in_zip
+                .map(|v| v.to_owned())
+                .collect();
+
+            filenames_in_zip
         };
-        debug!("Microsoft Azure: filename in zip {}", filename_in_zip);
+        debug!("Microsoft Azure: filenames in zip {:?}", filenames_in_zip);
+
+        // Формируем json с именами файлов
+        let flight_packages_json: Vec<_> = filenames_in_zip
+            .into_iter()
+            .map(|filename_in_zip| {
+                json!(                    {
+                  "fileName": filename_in_zip,
+                  "fileStatus": "PendingUpload",
+                  "minimumDirectXVersion": "None",
+                  "minimumSystemRam": "None"
+                })
+            })
+            .collect();
 
         // Обновляем имя пакета
         self.data = self
@@ -387,14 +401,7 @@ impl FlightSubmission {
             .in_current_span()
             .await?
             .json(&json!({
-                "flightPackages": [
-                    {
-                      "fileName": filename_in_zip,
-                      "fileStatus": "PendingUpload",
-                      "minimumDirectXVersion": "None",
-                      "minimumSystemRam": "None"
-                    }
-                ],
+                "flightPackages": flight_packages_json,
                 "targetPublishMode": "Manual",
                 // "notesForCertification": "No special steps are required for certification of this app."
             }))

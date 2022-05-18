@@ -378,6 +378,9 @@ impl FlightSubmission {
             filenames_in_zip
         };
         debug!("Microsoft Azure: filenames in zip {:?}", filenames_in_zip);
+        if filenames_in_zip.is_empty() {
+            return Err(MicrosoftAzureError::NoAppxFilesInZip);
+        }
 
         // Формируем json с именами файлов
         let flight_packages_json: Vec<_> = filenames_in_zip

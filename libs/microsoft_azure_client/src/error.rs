@@ -62,7 +62,7 @@ quick_error! {
         }
 
         /// Внутри .zip файлика нету .appx / .appxupload
-        NoAppxFileInZip{
+        NoAppxFilesInZip{
         }
 
         /// Получили какой-то кривой статус коммита

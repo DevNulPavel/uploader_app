@@ -9,7 +9,6 @@ use tokio::sync::Mutex;
 use tracing::debug;
 use url::Url;
 
-
 ////////////////////////////////////////////////////////////////
 
 /// Внутренняя структура, содержащая общие переменные для запроса и сброса токена
@@ -95,17 +94,13 @@ impl TokenProvider {
     /// Так как токен короткоживущий и обновляется внутри при необходимости
     /// токен отдается в виде Arc, чтобы не делать бессмысленных копирований памяти
     pub async fn get_access_token(&self) -> Result<Arc<String>, MicrosoftAzureError> {
-        // TODO: Как-то сделать лучше
-
         // Делаем некую машину состояний, чтобы вернуть валидный рабочий токен после всех проверок
         let mut token_guard = self.active_token.lock().await;
         loop {
             match token_guard.as_ref() {
                 // Если токен не заканчивает время жизни через указанную задержку, то все норм
                 // Иначе все делаем сброс
-                Some(token)
-                    if !token.is_will_be_expired_soon(self.inner.token_expire_pre_delay) =>
-                {
+                Some(token) if !token.is_expired_soon(self.inner.token_expire_pre_delay) => {
                     //debug!("Token is OK");
 
                     // Все нормально, возвращаем склонированное значение токена

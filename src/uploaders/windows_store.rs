@@ -11,7 +11,7 @@ pub async fn upload_in_windows_store(
     env_params: WindowsStoreEnvironment,
     app_params: WindowsStoreParams,
 ) -> UploadResult {
-    info!("Start google play uploading");
+    info!("Start windows store uploading");
 
     // Создаем клиента
     let client = MicrosoftAzureClient::new(
@@ -30,24 +30,26 @@ pub async fn upload_in_windows_store(
 
     let flight_name = match app_params.test_flight_name {
         Some(name) => name,
-        None => format!("Test (UTC: {})", chrono::Utc::now().format("%Y-%m-%d %H:%M"))
+        None => format!(
+            "Test (UTC: {})",
+            chrono::Utc::now().format("%Y-%m-%d %H:%M")
+        ),
     };
 
     // Делавем попытку выгрузки
     client
-        .upload_production_build(
-            upload_file_path,
-            app_params.test_groups,
-            flight_name,
-        )
+        .upload_production_build(upload_file_path, app_params.test_groups, flight_name)
         .await
-        .expect("Upload failed");
+        .tap_err(|err| {
+            error!("Microsoft Azure uploading failed with error: {}", err);
+        })?;
 
+    // Получим имя файлика без пути
     let file_name = upload_file_path
         .file_name()
-        .ok_or("Google play: invalid file name")?
+        .ok_or("Microsoft Azure: invalid file name")?
         .to_str()
-        .ok_or("Google play: Invalid file name")?;
+        .ok_or("Microsoft Azure : Invalid file name")?;
 
     // Финальное сообщение
     let message = format!("Windows store uploading finished:\n- {}", file_name);

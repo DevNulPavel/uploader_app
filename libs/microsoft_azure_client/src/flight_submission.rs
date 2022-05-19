@@ -146,6 +146,8 @@ impl FlightSubmission {
     }
 
     /// Выполнение выгрузки непосредственно файлика с билдом
+    /// Способ выгрузки через Append работает что-то не очень хорошо,
+    /// поэтому переделано на вариант с блочной выгрузкой
     /*async fn perform_file_uploading(&self, file_path: &Path) -> Result<(), MicrosoftAzureError> {
         debug!("Microsoft Azure: file uploading start");
 
@@ -343,6 +345,37 @@ impl FlightSubmission {
         Ok(())
     }
 
+    /// Ищем внутри архива файлики .appx / .appxupload
+    fn find_filenames_in_zip(zip_file_path: &Path) -> Result<Vec<String>, MicrosoftAzureError> {
+        // Проверяем расширение данного файлика
+        if !check_file_extention(zip_file_path, "zip") {
+            return Err(MicrosoftAzureError::InvalidUploadFileExtention);
+        }
+
+        let zip = zip::ZipArchive::new(std::fs::File::open(&zip_file_path)?)?;
+        let filenames_in_zip: Vec<_> = zip
+            .file_names()
+            .filter(|full_path_str| {
+                let file_name = std::path::Path::new(full_path_str)
+                    .file_name()
+                    .and_then(|f| f.to_str());
+                if let Some(file_name) = file_name {
+                    !file_name.starts_with('.')
+                        && (file_name.ends_with(".appx") || file_name.ends_with(".appxupload"))
+                } else {
+                    false
+                }
+            })
+            .map(|v| v.to_owned())
+            .collect();
+
+        debug!("Microsoft Azure: filenames in zip {:?}", filenames_in_zip);
+        if filenames_in_zip.is_empty() {
+            return Err(MicrosoftAzureError::NoAppxFilesInZip);
+        }
+        Ok(filenames_in_zip)
+    }
+
     /// Выгружаем наш билд
     #[instrument(skip(self, zip_file_path))]
     pub async fn upload_build(&mut self, zip_file_path: &Path) -> Result<(), MicrosoftAzureError> {
@@ -351,36 +384,8 @@ impl FlightSubmission {
             return Err(MicrosoftAzureError::NoFile(zip_file_path.to_owned()));
         }
 
-        // Проверяем расширение данного файлика
-        if !check_file_extention(zip_file_path, "zip") {
-            return Err(MicrosoftAzureError::InvalidUploadFileExtention);
-        }
-
-        // Открываем zip файлик и получаем имя .appx там
-        let filenames_in_zip = {
-            let zip = zip::ZipArchive::new(std::fs::File::open(&zip_file_path)?)?;
-            let filenames_in_zip: Vec<_> = zip
-                .file_names()
-                .filter(|full_path_str| {
-                    let file_name = std::path::Path::new(full_path_str)
-                        .file_name()
-                        .and_then(|f| f.to_str());
-                    if let Some(file_name) = file_name {
-                        !file_name.starts_with('.')
-                            && (file_name.ends_with(".appx") || file_name.ends_with(".appxupload"))
-                    } else {
-                        false
-                    }
-                })
-                .map(|v| v.to_owned())
-                .collect();
-
-            filenames_in_zip
-        };
-        debug!("Microsoft Azure: filenames in zip {:?}", filenames_in_zip);
-        if filenames_in_zip.is_empty() {
-            return Err(MicrosoftAzureError::NoAppxFilesInZip);
-        }
+        // Открываем zip файлик и получаем имя .appx/.appxupload там
+        let filenames_in_zip = Self::find_filenames_in_zip(zip_file_path)?;
 
         // Формируем json с именами файлов
         let flight_packages_json: Vec<_> = filenames_in_zip
@@ -419,8 +424,10 @@ impl FlightSubmission {
 
         // Получаем чистый HTTP клиент для выгрузки файлика
         let http_client = self.request_builder.get_http_client();
+
         // Создаем непосредственно урл для добавления данных
         let append_data_url = reqwest::Url::parse(&self.data.file_upload_url)?;
+
         // Выполняем непосредственно выгрузку на сервер нашего архива
         perform_file_uploading(&http_client, &append_data_url, zip_file_path)
             .in_current_span()

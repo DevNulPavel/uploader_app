@@ -32,7 +32,7 @@ impl From<TokenResponse> for Token {
 
 impl Token {
     /// Проверяем, что время жизни истекает скоро, при этом учитываем предзадержку
-    pub fn is_will_be_expired_soon(&self, pre_delay: Duration) -> bool {
+    pub fn is_expired_soon(&self, pre_delay: Duration) -> bool {
         let complete_time_val = self.complete_time.sub(pre_delay);
         Instant::now().gt(&complete_time_val)
     }

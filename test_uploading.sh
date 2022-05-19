@@ -48,7 +48,9 @@ export RUST_LOG=uploader_app=debug,microsoft_azure_client=debug
 # Microsoft store
 UPLOAD_PARAMS=()
 UPLOAD_PARAMS+=(--windows_app_id '9PBPBN166FXW')
-UPLOAD_PARAMS+=(--windows_flight_groups '1152921504607280735')
+UPLOAD_PARAMS+=(--windows_production_submission_name 'Production build')
+UPLOAD_PARAMS+=(--windows_production_zip_file_path '/Users/devnul/Downloads/MHouseXGen_5.161.0.0_Win32_TEST_UPLOAD.appxupload.zip')
 # UPLOAD_PARAMS+=(--windows_test_flight_name 'Flight name test')
-UPLOAD_PARAMS+=(--windows_zip_file_path '/Users/devnul/Downloads/MHouseXGen_5.161.0.0_Win32_TEST_UPLOAD.appxupload.zip')
+# UPLOAD_PARAMS+=(--windows_test_flight_groups '1152921504607280735')
+# UPLOAD_PARAMS+=(--windows_test_flight_zip_file_path '/Users/devnul/Downloads/MHouseXGen_5.161.0.0_Win32_TEST_UPLOAD.appxupload.zip')
 target/debug/uploader_app "${UPLOAD_PARAMS[@]}"

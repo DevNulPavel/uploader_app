@@ -42,8 +42,6 @@ async fn library_integration_test() {
     let application_id = "9PBPBN166FXW".to_owned();
     let upload_file_path =
         Path::new("/Users/devnul/Downloads/MHouseXGen_5.161.0.0_Win32_TEST_UPLOAD.appxupload.zip");
-    let groups = vec!["1152921504607280735".to_owned()];
-    let test_flight_name = "Flight name test".to_owned();
 
     // Создаем HTTP клиента, можно спокойно клонировать, внутри Arc
     let http_client = Client::new();
@@ -59,8 +57,21 @@ async fn library_integration_test() {
     .expect("Client create failed");
 
     // Делавем попытку выгрузки
-    client
-        .upload_production_build(upload_file_path, groups, test_flight_name)
-        .await
-        .expect("Upload failed");
+    // {
+    //     let groups = vec!["1152921504607280735".to_owned()];
+    //     let test_flight_name = "Flight name test".to_owned();
+    //     client
+    //         .upload_flight_build(upload_file_path, groups, test_flight_name)
+    //         .await
+    //         .expect("Upload failed");
+    // }
+
+    // Делавем попытку выгрузки
+    {
+        let upload_name = "Production test".to_owned();
+        client
+            .upload_production_build(upload_file_path, upload_name)
+            .await
+            .expect("Upload failed");
+    }
 }

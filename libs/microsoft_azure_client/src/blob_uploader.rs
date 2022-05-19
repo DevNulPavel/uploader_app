@@ -189,7 +189,7 @@ fn usize_to_displayable<T: humansize::FileSize>(
 }
 
 /// Выполнение выгрузки непосредственно файлика с билдом
-pub async fn perform_file_uploading(
+pub async fn perform_blob_file_uploading(
     http_client: &Client,
     url: &Url,
     file_path: &Path,

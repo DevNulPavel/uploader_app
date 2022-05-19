@@ -1,6 +1,7 @@
 use crate::{
     error::MicrosoftAzureError, flight_submission::FlightSubmission,
-    request_builder::RequestBuilder, token::TokenProvider,
+    production_submission::ProductionSubmission, request_builder::RequestBuilder,
+    token::TokenProvider,
 };
 use reqwest::Client;
 use std::path::Path;
@@ -32,7 +33,7 @@ impl MicrosoftAzureClient {
 
     /// Непосредственно выгружаем архив с билдом
     #[instrument(skip(self, zip_upload_file_path, groups, test_flight_name))]
-    pub async fn upload_production_build(
+    pub async fn upload_flight_build(
         &self,
         zip_upload_file_path: &Path,
         groups: Vec<String>,
@@ -53,6 +54,34 @@ impl MicrosoftAzureClient {
         debug!("Microsoft Azure: File uploading start");
         submission
             .upload_build(zip_upload_file_path)
+            .in_current_span()
+            .await?;
+        debug!("Microsoft Azure: File uploading finished");
+
+        Ok(())
+    }
+
+    /// Непосредственно выгружаем архив с билдом
+    #[instrument(skip(self, zip_upload_file_path))]
+    pub async fn upload_production_build(
+        &self,
+        zip_upload_file_path: &Path,
+        submission_name: String,
+    ) -> Result<(), MicrosoftAzureError> {
+        // https://docs.microsoft.com/en-us/windows/uwp/monetize/manage-flights
+        // https://docs.microsoft.com/en-us/windows/uwp/monetize/python-code-examples-for-the-windows-store-submission-api
+
+        // Создаем новый Submission для данного приложения
+        debug!("Microsoft Azure: production submission create try");
+        let mut submission = ProductionSubmission::start_new(self.request_builder.clone())
+            .in_current_span()
+            .await?;
+        debug!("Microsoft Azure: production submission created");
+
+        // Выполняем выгрузку файлика
+        debug!("Microsoft Azure: File uploading start");
+        submission
+            .upload_build(zip_upload_file_path, submission_name)
             .in_current_span()
             .await?;
         debug!("Microsoft Azure: File uploading finished");

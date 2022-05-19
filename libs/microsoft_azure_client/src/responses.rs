@@ -179,7 +179,7 @@ pub struct FlightPackage {
     minimum_directx_version: Option<String>,
 
     #[serde(rename = "minimumSystemRam")]
-    minimum_system_ram: Option<String>
+    minimum_system_ram: Option<String>,
 }
 
 /// Данная структура представляет собой ответ после инициализации flight сабмиссии
@@ -199,7 +199,7 @@ pub struct FlightSubmissionsCreateResponse {
     pub file_upload_url: String,
 
     #[serde(rename = "flightPackages")]
-    pub flight_packages: Option<Vec<FlightPackage>>
+    pub flight_packages: Option<Vec<FlightPackage>>,
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -215,13 +215,35 @@ pub struct FlightSubmissionCommitResponse {
 
 /// Данная структура представляет собой ответ после инициализации
 /// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/create-an-app-submission#response`
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Default, Serialize, Debug, Clone)]
 pub struct AppPackage {
     #[serde(rename = "fileName")]
     pub file_name: String,
-    
+
+    #[serde(rename = "fileStatus")]
+    pub file_status: String,
+
     #[serde(flatten)]
     pub other: serde_json::Value
+
+    // pub id: Option<String>,
+
+    // pub version: Option<String>,
+
+    // pub architecture: Option<String>,
+
+    // pub languages: Option<Vec<String>>,
+
+    // pub capabilities: Option<Vec<String>>,
+
+    // #[serde(rename = "minimumDirectXVersion")]
+    // pub minimum_directx_version: Option<String>,
+
+    // #[serde(rename = "minimumSystemRam")]
+    // pub minimum_system_ram: Option<String>,
+
+    // #[serde(rename = "targetDeviceFamilies")]
+    // pub target_device_families: Option<Vec<String>>,
 }
 
 /// Данная структура представляет собой ответ после инициализации
@@ -283,6 +305,10 @@ pub struct SubmissionCommonData {
     pub allow_target_future_device_families: serde_json::Value,
 
     pub trailers: serde_json::Value,
+
+    // Имя, которое отображается в админке
+    #[serde(rename = "friendlyName")]
+    pub friendly_name: Option<String>,
 }
 
 /// Данная структура представляет собой ответ после инициализации
@@ -301,10 +327,6 @@ pub struct SubmissionCreateResponse {
 
     #[serde(rename = "fileUploadUrl")]
     pub file_upload_url: String,
-
-    // Имя, которое отображается в админке
-    // #[serde(rename = "friendlyName")]
-    // pub friendly_name: String,
 
     // #[serde(flatten)]
     // pub other_fields: serde_json::Value,

@@ -5,6 +5,15 @@ use std::path::Path;
 use tap::TapFallible;
 use tracing::{error, info, instrument};
 
+fn get_file_name(path: &Path) -> Result<&str, &str> {
+    let file_name = path
+        .file_name()
+        .ok_or("Microsoft Azure: invalid file name")?
+        .to_str()
+        .ok_or("Microsoft Azure : Invalid file name")?;
+    Ok(file_name)
+}
+
 #[instrument(skip(http_client, env_params, app_params))]
 pub async fn upload_in_windows_store(
     http_client: reqwest::Client,
@@ -25,38 +34,74 @@ pub async fn upload_in_windows_store(
         error!("Microsoft Azure client create failed with error: {}", err);
     })?;
 
-    // Файлик выгрузки
-    let upload_file_path = Path::new(&app_params.zip_file_path);
+    let mut messages = Vec::new();
 
-    let flight_name = match app_params.test_flight_name {
-        Some(name) => name,
-        None => format!(
-            "Test (UTC: {})",
-            chrono::Utc::now().format("%Y-%m-%d %H:%M")
-        ),
-    };
+    // Продакшен выгрузка
+    if let Some(production_zip) = app_params.production_zip_file_path {
+        // Файлик выгрузки
+        let upload_file_path = Path::new(&production_zip);
 
-    // Делавем попытку выгрузки
-    client
-        .upload_production_build(upload_file_path, app_params.test_groups, flight_name)
-        .await
-        .tap_err(|err| {
-            error!("Microsoft Azure uploading failed with error: {}", err);
-        })?;
+        // Генерация имени выгрузки
+        let submission_name = match app_params.production_submission_name {
+            Some(name) => name,
+            None => format!(
+                "Production (UTC: {})",
+                chrono::Utc::now().format("%Y-%m-%d %H:%M")
+            ),
+        };
 
-    // Получим имя файлика без пути
-    let file_name = upload_file_path
-        .file_name()
-        .ok_or("Microsoft Azure: invalid file name")?
-        .to_str()
-        .ok_or("Microsoft Azure : Invalid file name")?;
+        // Делавем попытку выгрузки
+        client
+            .upload_production_build(upload_file_path, submission_name)
+            .await
+            .tap_err(|err| {
+                error!(
+                    "Microsoft Azure production uploading failed with error: {}",
+                    err
+                );
+            })?;
 
-    // Финальное сообщение
-    let message = format!("Windows store uploading finished:\n- {}", file_name);
+        // Финальное сообщение
+        messages.push(format!(
+            "Windows store production uploading finished:\n- {}",
+            get_file_name(upload_file_path)?
+        ));
+    }
+
+    // Тестовая выгрузка
+    if let (Some(test_zip), Some(groups)) = (
+        app_params.test_flight_zip_file_path,
+        app_params.test_flight_groups,
+    ) {
+        // Файлик выгрузки
+        let upload_file_path = Path::new(&test_zip);
+
+        // Генерация имени выгрузки
+        let flight_name = match app_params.test_flight_name {
+            Some(name) => name,
+            None => format!(
+                "Test (UTC: {})",
+                chrono::Utc::now().format("%Y-%m-%d %H:%M")
+            ),
+        };
+
+        // Делавем попытку выгрузки
+        client
+            .upload_flight_build(upload_file_path, groups, flight_name)
+            .await
+            .tap_err(|err| {
+                error!("Microsoft Azure test uploading failed with error: {}", err);
+            })?;
+
+        messages.push(format!(
+            "Windows store test uploading finished:\n- {}",
+            get_file_name(upload_file_path)?
+        ));
+    }
 
     Ok(UploadResultData {
         target: "Windows store",
-        message: Some(message),
+        message: Some(messages.join("\n\n")),
         install_url: None,
     })
 }

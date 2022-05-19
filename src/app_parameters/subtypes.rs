@@ -76,14 +76,19 @@ params_data_type!(
 params_data_type!(
     WindowsStoreParams{
         Req{
-            app_id: "windows_app_id" : "Application ID",
-            zip_file_path : "windows_zip_file_path" : "ZIP file with .appx or .appxupload inside"
+            app_id: "windows_app_id" : "Application ID"
         }
         Opt{
+            // Production
+            production_zip_file_path : "windows_production_zip_file_path" : "ZIP file with .appx or .appxupload inside",
+            production_submission_name : "windows_production_submission_name": "Submission name in admin console",
+
+            // Test
+            test_flight_zip_file_path : "windows_test_flight_zip_file_path" : "ZIP file with .appx or .appxupload inside",
             test_flight_name : "windows_test_flight_name": "Test flight name in admin console"
         }
-        Mult {
-            test_groups : "windows_flight_groups" : "Microsoft flight groups for tests"
+        MultOpt {
+            test_flight_groups : "windows_test_flight_groups" : "Microsoft flight groups for tests"
         }
     }
 );

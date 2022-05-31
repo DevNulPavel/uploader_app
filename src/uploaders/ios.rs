@@ -12,7 +12,7 @@ use std::{
     time::Duration,
 };
 use tap::TapFallible;
-use tokio::{process::Command, time::delay_for};
+use tokio::{process::Command, time::sleep};
 use tracing::{debug, error, instrument};
 
 /*
@@ -117,7 +117,7 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
                 error!("{error_text}");
 
                 // Подождем 10 секунд, может быть следующая итерация будет успешной
-                delay_for(Duration::from_secs(10)).await;
+                sleep(Duration::from_secs(10)).await;
             }
         } else {
             break output;

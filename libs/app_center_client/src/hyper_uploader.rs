@@ -194,7 +194,11 @@ impl<'a> AppCenterUploader<'a> {
     async fn upload_file(&mut self, upload_info: MetaInfoSetResponse) -> Result<(), AppCenterError>{
         // const MAX_UPLOADS_COUNT: usize = 10;
 
-        let https = hyper_rustls::HttpsConnector::new();
+        let https = hyper_rustls::HttpsConnectorBuilder::new()
+            .with_native_roots()
+            .https_or_http()
+            .enable_http1()
+            .build();
         let client = hyper::Client::builder().build(https);
 
         let mut total_upload_length = 0;

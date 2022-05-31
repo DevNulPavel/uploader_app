@@ -8,7 +8,7 @@ use std::{
 };
 use tokio::{
     time::{
-        delay_for
+        sleep
     }
 };
 use tracing::{
@@ -137,7 +137,7 @@ pub async fn upload_in_app_center(http_client: reqwest::Client,
 
                 if iteration_number <= 5 {
                     info!("Wait some time before new iteration");
-                    delay_for(Duration::from_secs(20)).await;
+                    sleep(Duration::from_secs(20)).await;
                 }else{
                     return Err(format!("AppCenter uploading failed with error: {}", err).into());
                 }

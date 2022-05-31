@@ -168,7 +168,7 @@ impl AppCenterClient {
                     return Ok(release_distinct_id)
                 },
                 UploadingFinishedGetStatusResponse::Waiting{..} => {
-                    tokio::time::delay_for(std::time::Duration::from_secs(10)).await;
+                    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
                 },
                 UploadingFinishedGetStatusResponse::Error{error_details, ..} => {
                     return Err(AppCenterError::ReleaseIdReceiveFailed(error_details));

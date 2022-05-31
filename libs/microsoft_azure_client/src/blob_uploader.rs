@@ -48,7 +48,7 @@ async fn upload_worker(
     http_client: Client,
     url: Url,
     task_receiver: async_channel::Receiver<UploadTask>,
-    mut result_sender: mpsc::Sender<Result<UploadResult, MicrosoftAzureError>>,
+    result_sender: mpsc::Sender<Result<UploadResult, MicrosoftAzureError>>,
 ) {
     // Получаем задачи пока они есть и канал открыт
     while let Ok(task) = task_receiver.recv().in_current_span().await {
@@ -100,7 +100,7 @@ async fn upload_worker(
                         "Retry uploading for url: {}, iteration: {}, res: {:?}",
                         url, iter_count, res
                     );
-                    tokio::time::delay_for(time::Duration::from_secs(3))
+                    tokio::time::sleep(time::Duration::from_secs(3))
                         .in_current_span()
                         .await;
                     continue;
@@ -277,7 +277,7 @@ pub async fn perform_blob_file_uploading(
                     break;
                 }
                 // Канал по каким-то причинал закрыт, значит генерируем ошибку
-                Result::Err(tokio::sync::mpsc::error::TryRecvError::Closed) => {
+                Result::Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
                     return Err(MicrosoftAzureError::UploadingError(
                         SpanTrace::capture(),
                         "Receive channel cannot be closed in progress of uploading".to_owned(),

@@ -61,7 +61,7 @@ pub async fn wait_commit_finished(request_builder: &RequestBuilder) -> Result<()
         match status_response.status.as_str() {
             // Нормальное состояние для ожидания
             "CommitStarted" => {
-                tokio::time::sleep(std::time::Duration::from_secs(15)).await;
+                tokio::time::delay_for(std::time::Duration::from_secs(15)).await;
             }
 
             // Коммит прошел успешно, прерываем ожидание

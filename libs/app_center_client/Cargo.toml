@@ -4,29 +4,29 @@ version = "1.0.0"
 authors = ["Pavel Ershov <pershov@game-insight.com>"]
 edition = "2021"
 
-[features]
-default = ["rustls"]
-rustls = ["reqwest/rustls-tls"]     # Пробрасываем опцию в reqwest
-native-tls = ["reqwest/native-tls"]
+# [features]
+# default = ["rustls"]
+# rustls = ["reqwest/rustls-tls"]     # Пробрасываем опцию в reqwest
+# native-tls = ["reqwest/native-tls"]
 
 [dependencies]
-reqwest = {version = "0.10.10", default-features = false, features = ["json", "stream"]}
-hyper = "0.13.9"
-hyper-rustls = "0.21.0"
-futures = "0.3.8"
-serde = {version="1.0.116", features=["derive"]}
-serde_json = "1.0.57"
+reqwest = {version = "0.11", default-features = false, features = ["json", "stream", "rustls-tls"]}
+hyper = "0.14"
+hyper-rustls = "0.23"
+futures = "0.3"
+serde = {version="1", features=["derive"]}
+serde_json = "1"
 tracing = "0.1"
-url = "2.2.0"
-bytes = "0.5.6"
-reqwest_inspect_json = "0.0.3"
-tokio = {version="0.2.24", default-features = false, features = ["fs", "io-util", "rt-util"]}
-tokio-util = {version = "0.3.1", features = ["codec"]}
+url = "2"
+bytes = "1"
+reqwest_inspect_json = "0.1"
+tokio = {version="1", default-features = false, features = ["fs", "io-util", "rt"]}
+tokio-util = {version = "0.7", features = ["codec"]}
 
 # TODO: Фичи только во время теста
 [dev-dependencies]
-tokio = {version="0.2.24", default-features = false, features = ["fs", "io-util", "macros"]}
-env_logger = "0.8.2"
-qrcode = "0.12.0"
-image = "0.23.12"
-dirs = "3.0.1"
+tokio = {version="1", default-features = false, features = ["fs", "io-util", "macros", "test-util"]}
+env_logger = "0.9"
+qrcode = "0.12"
+image = "0.23" # QRCode совместима лишь с этой версией
+dirs = "4"

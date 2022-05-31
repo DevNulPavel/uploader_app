@@ -28,7 +28,7 @@ where
     // Специальный флаг, который показывает, что у нас была хотя бы одна успешная выгрузка
     let mut has_success_uploading = false;
 
-    let (mut tx, mut rx) = tokio::sync::mpsc::channel::<UploadResult>(20);
+    let (tx, mut rx) = tokio::sync::mpsc::channel::<UploadResult>(20);
     let result_sender_task = tokio::spawn(async move {
         while let Some(res) = rx.recv().await {
             // Обрабатываем результат
@@ -257,10 +257,10 @@ fn main() {
     let _guard = setup_logs();
 
     // Запускаем асинхронный рантайм
-    let mut runtime = Builder::default()
+    let runtime = Builder::new_multi_thread()
         .enable_all()
         // .basic_scheduler()
-        .threaded_scheduler()
+        // .threaded_scheduler()
         //.core_threads(1)
         //.max_threads(2)
         .build()

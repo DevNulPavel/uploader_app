@@ -20,7 +20,7 @@ pub async fn upload_in_facebook_instant(
     env_params: FacebookInstantEnvironment,
     app_params: FacebookInstantParams,
 ) -> UploadResult {
-    info!("Start windows store uploading");
+    info!("Start facebook uploading");
 
     let upload_file_path = PathBuf::from(app_params.zip_file_path);
 

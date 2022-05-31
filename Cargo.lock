@@ -597,6 +597,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77f3309417938f28bf8228fcff79a4a37103981e3e186d2ccd19c74b38f4eb71"
 
 [[package]]
+name = "facebook_instant_client"
+version = "1.0.0"
+dependencies = [
+ "dirs",
+ "env_logger",
+ "futures",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio 0.2.24",
+ "tokio-util",
+ "tracing",
+ "tracing-error",
+ "url",
+]
+
+[[package]]
 name = "flame"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2909,6 +2926,7 @@ dependencies = [
  "chrono",
  "clap",
  "dirs",
+ "facebook_instant_client",
  "flame",
  "flamer",
  "futures",

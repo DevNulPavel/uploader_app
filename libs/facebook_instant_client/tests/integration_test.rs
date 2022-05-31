@@ -1,14 +1,4 @@
-use std::{
-    env::{self},
-    path::Path,
-    sync::Once,
-};
-// use log::{
-// debug,
-// info
-// };
-use microsoft_azure_client::MicrosoftAzureClient;
-use reqwest::Client;
+use std::sync::Once;
 
 fn setup_logs() {
     static ONCE: Once = Once::new();
@@ -32,6 +22,4 @@ fn setup_logs() {
 #[tokio::test]
 async fn library_integration_test() {
     setup_logs();
-
-    
 }

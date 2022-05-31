@@ -2,7 +2,7 @@
 name = "google_play_client"
 version = "1.0.0"
 authors = ["Pavel Ershov <pershov@game-insight.com>"]
-edition = "2018"
+edition = "2021"
 
 [features]
 default = ["rustls"]

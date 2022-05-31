@@ -10,13 +10,15 @@ edition = "2021"
 # native-tls = ["reqwest/native-tls"]
 
 [dependencies]
-reqwest = {version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream"]}
+reqwest = {version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream", "multipart"]}
 tokio = {version="1", default-features = false, features = ["fs", "io-util", "rt"]}
+tokio-util = {version = "0.7", features = ["codec"]}
 serde = {version="1", features=["derive"]}
 serde_json = "1"
 tracing = "0.1"
 thiserror = "1"
-backtrace = "0.3"
+mime = "0.3"
+# backtrace = "0.3"
 # derive_more = "0.99"
 
 # TODO: Фичи только во время теста

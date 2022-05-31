@@ -5,7 +5,7 @@ mod responses;
 use crate::{
     error::{convert_error, FacebookInstantError},
     json_helpers::ParseJson,
-    responses::{ResponseWrapper, TokenResponse},
+    responses::{ResponseWrapper, TokenResponse, UploadResponse},
 };
 // use backtrace::Backtrace as BacktraceNoStd;
 use reqwest::{
@@ -27,13 +27,13 @@ impl FacebookInstantClient {
     pub async fn new(
         http_client: Client,
         app_id: String,
-        app_secret: &str,
+        app_secret: String,
     ) -> Result<Self, FacebookInstantError> {
         let token_info = http_client
             .get("https://graph.facebook.com/oauth/access_token")
             .query(&[
                 ("client_id", app_id.as_str()),
-                ("client_secret", app_secret),
+                ("client_secret", app_secret.as_str()),
                 ("grant_type", "client_credentials"),
             ])
             .send()
@@ -47,6 +47,7 @@ impl FacebookInstantClient {
             .map_err(convert_error!(ResponseParsing, "Token request"))?
             .into_result()
             .map_err(convert_error!(ApiResponse, "Token request"))?;
+        drop(app_secret);
         debug!("Received token info from Facebook: {:?}", token_info);
 
         Ok(FacebookInstantClient {
@@ -121,7 +122,8 @@ impl FacebookInstantClient {
                     .map_err(convert_error!(Request, "Multipart request building"))?,
             );
 
-        self.http_client
+        let response = self
+            .http_client
             .post(format!(
                 "https://graph-video.facebook.com/{}/assets",
                 self.app_id
@@ -132,7 +134,38 @@ impl FacebookInstantClient {
             .await
             .map_err(convert_error!(Request, "Uploading request"))?
             .error_for_status()
-            .map_err(convert_error!(ResponseReceiving, "Uploading request"))?;
+            .map_err(convert_error!(
+                ResponseReceiving,
+                "Uploading request, error status"
+            ))?
+            .text()
+            .await
+            .map_err(convert_error!(
+                ResponseReceiving,
+                "Uploading request, responce receiving"
+            ))?
+            .parse_json_with_data_err::<ResponseWrapper<UploadResponse>>()
+            .map_err(convert_error!(ResponseParsing, "Token request"))?
+            .into_result()
+            .map_err(convert_error!(ApiResponse, "Token request"))?;
+
+        debug!("Response after uploading: {:?}", response);
+
+        // Адреса запуска игр:
+        // https://www.facebook.com/gaming/play/420544052753044/?
+        // source=dev_site&
+        // game_url=https%3A%2F%2Fapps-420544052753044.apps.fbsbx.com%2Finstant-bundle%2F177318527884154%2F5275548972507693%2Findex.html%3F__cci%3DFQAREhIA.ARbkHwKtTJDaJWqMw26tTsrfLT0al1jLa0I8vhMPYpxufB3i&
+        // ext=1654267178&
+        // hash=AeTBYbnFdO2aD2mMf3o
+
+        // Url-decoded:
+        // https://apps-420544052753044.apps.fbsbx.com/instant-bundle/177318527884154/5275548972507693/index.html?__cci=FQAREhIA.ARbkHwKtTJDaJWqMw26tTsrfLT0al1jLa0I8vhMPYpxufB3i&
+
+        // https://www.facebook.com/gaming/play/420544052753044/?
+        // source=dev_site&
+        // game_url=https%3A%2F%2Fapps-420544052753044.apps.fbsbx.com%2Finstant-bundle%2F177318527884154%2F7915669388443981%2Findex.html%3F__cci%3DFQAREhIA.ARbkHwKtTJDaJWqMw26tTsrfLT0al1jLa0I8vhMPYpxufCiR&
+        // ext=1654267481&
+        // hash=AeQgDH0v4O1h8mEFBKY
 
         Ok(())
     }

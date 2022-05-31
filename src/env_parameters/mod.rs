@@ -60,6 +60,7 @@ describe_env_values!(
     google_drive: GoogleDriveEnvironment,
     ios: IOSEnvironment,
     windows: WindowsStoreEnvironment,
+    facebook: FacebookInstantEnvironment,
     ssh: SSHEnvironment,
     target_slack: TargetSlackEnvironment,
     result_slack: ResultSlackEnvironment

@@ -52,3 +52,10 @@ pub struct TokenResponse {
     pub access_token: String,
     pub token_type: String,
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Deserialize, Debug)]
+pub struct UploadResponse {
+    pub success: bool
+}

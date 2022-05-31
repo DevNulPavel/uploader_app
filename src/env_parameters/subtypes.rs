@@ -87,6 +87,17 @@ env_params_type!(
 /////////////////////////////////////////////////
 
 env_params_type!(
+    FacebookInstantEnvironment{
+        Req{
+            app_id: "FACEBOOK_INSTANT_APP_ID",
+            app_secret: "FACEBOOK_INSTANT_APP_SECRET"
+        }
+    }
+);
+
+/////////////////////////////////////////////////
+
+env_params_type!(
     SSHEnvironment{
         Req{
             server: "SSH_SERVER",

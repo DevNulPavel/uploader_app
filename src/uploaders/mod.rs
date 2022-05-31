@@ -5,6 +5,7 @@ mod google_play;
 mod ios;
 mod upload_result;
 mod windows_store;
+mod facebook_instant;
 
 #[cfg(target_family = "unix")]
 #[path = "ssh_unix.rs"]
@@ -22,5 +23,6 @@ pub use self::{
     ios::upload_in_ios,
     ssh::upload_by_ssh,
     windows_store::upload_in_windows_store,
+    facebook_instant::upload_in_facebook_instant,
     upload_result::{UploadResult, UploadResultData},
 };

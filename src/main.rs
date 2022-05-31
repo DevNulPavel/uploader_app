@@ -8,8 +8,9 @@ use self::{
     env_parameters::{AppEnvValues, ResultSlackEnvironment},
     result_senders::{ResultSender, SlackResultSender, TerminalSender},
     uploaders::{
-        upload_by_ssh, upload_in_amazon, upload_in_app_center, upload_in_google_drive,
-        upload_in_google_play, upload_in_ios, upload_in_windows_store, UploadResult,
+        upload_by_ssh, upload_in_amazon, upload_in_app_center, upload_in_facebook_instant,
+        upload_in_google_drive, upload_in_google_play, upload_in_ios, upload_in_windows_store,
+        UploadResult,
     },
 };
 use futures::future::{join_all, select_all, Future, FutureExt};
@@ -134,10 +135,17 @@ fn build_uploaders(
         active_workers.push(fut);
     }
 
-    // Создаем задачу выгрузки в IOS
+    // Создаем задачу выгрузки в Windows store
     if let (Some(env_params), Some(app_params)) = (env_params.windows, app_parameters.windows) {
-        let fut = upload_in_windows_store(http_client, env_params, app_params).boxed();
+        let fut = upload_in_windows_store(http_client.clone(), env_params, app_params).boxed();
         info!("Windows store uploading task created");
+        active_workers.push(fut);
+    }
+
+    // Создаем задачу выгрузки в Windows store
+    if let (Some(env_params), Some(app_params)) = (env_params.facebook, app_parameters.facebook) {
+        let fut = upload_in_facebook_instant(http_client, env_params, app_params).boxed();
+        info!("Facebook instant uploading task created");
         active_workers.push(fut);
     }
 

@@ -93,6 +93,15 @@ params_data_type!(
     }
 );
 
+params_data_type!(
+    FacebookInstantParams{
+        Req{
+            zip_file_path: "facebook_instant_zip_file_path" : "Facebook instant path to zip file",
+            commentary: "facebook_instant_commentary" : "Facebook instant uploading commentary"
+        }
+    }
+);
+
 //////////////////////////////////////////////////////////////////////
 
 params_data_type!(

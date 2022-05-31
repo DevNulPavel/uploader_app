@@ -29,6 +29,7 @@ pub struct AppParameters{
     pub goolge_play: Option<GooglePlayParams>,
     pub ios: Option<IOSParams>,
     pub windows: Option<WindowsStoreParams>,
+    pub facebook: Option<FacebookInstantParams>,
     pub ssh: Option<SSHParams>,
     pub slack: Option<SlackParams>,
 }
@@ -45,6 +46,7 @@ impl AppParameters{
             .args(&GooglePlayParams::get_args())
             .args(&IOSParams::get_args())
             .args(&WindowsStoreParams::get_args())
+            .args(&FacebookInstantParams::get_args())
             .args(&SSHParams::get_args())
             .args(&SlackParams::get_args());
     
@@ -69,6 +71,7 @@ impl AppParameters{
             goolge_play: GooglePlayParams::parse(&matches),
             ios: IOSParams::parse(&matches),
             windows: WindowsStoreParams::parse(&matches),
+            facebook: FacebookInstantParams::parse(&matches),
             ssh: SSHParams::parse(&matches),
             slack: SlackParams::parse(&matches)
         }

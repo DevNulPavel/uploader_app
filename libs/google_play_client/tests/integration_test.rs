@@ -40,7 +40,7 @@ fn setup_logs() {
 async fn library_integration_test(){
     setup_logs();
 
-    let key = yup_oauth2::read_service_account_key("google_play_beta_credentials.json")
+    let key = yup_oauth2::read_service_account_key("env/google_play_beta_credentials.json")
         .await
         .expect("Auth info parse failed");
 

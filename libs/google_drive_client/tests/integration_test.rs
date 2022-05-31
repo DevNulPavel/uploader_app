@@ -40,7 +40,7 @@ fn setup_logs() {
 async fn library_integration_test(){
     setup_logs();
 
-    let key = yup_oauth2::read_service_account_key("test_google_drive_gi_auth_new.json")
+    let key = yup_oauth2::read_service_account_key("env/test_google_drive_gi_auth_new.json")
         .await
         .expect("Auth info parse failed");
 

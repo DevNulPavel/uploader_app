@@ -5,12 +5,13 @@ use std::path::{Path, PathBuf};
 use tap::TapFallible;
 use tracing::{error, info, instrument};
 
+/// Функция помогалка для получения пути
 fn get_file_name(path: &Path) -> Result<&str, &str> {
     let file_name = path
         .file_name()
-        .ok_or("Microsoft Azure: invalid file name")?
+        .ok_or("Facebook instant: invalid file name")?
         .to_str()
-        .ok_or("Microsoft Azure : Invalid file name")?;
+        .ok_or("Facebook instant: Invalid file name")?;
     Ok(file_name)
 }
 
@@ -22,9 +23,10 @@ pub async fn upload_in_facebook_instant(
 ) -> UploadResult {
     info!("Start facebook uploading");
 
+    // Заранее формируем путь
     let upload_file_path = PathBuf::from(app_params.zip_file_path);
 
-    // Финальное сообщение заранее
+    // Финальное сообщение заранее делаем, так как переменную перемещаем
     let message = format!(
         "Facebook instant games uploading finished:\n- {}\n\n\
         Console url:\n- https://developers.facebook.com/apps/{}/instant-games/hosting/",

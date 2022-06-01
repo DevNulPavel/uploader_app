@@ -1,31 +1,42 @@
-use std::{
-    env::{self},
-    path::Path,
-    sync::Once,
-};
-// use log::{
-// debug,
-// info
-// };
 use microsoft_azure_client::MicrosoftAzureClient;
 use reqwest::Client;
+use std::{env, path::Path, sync::Once};
+use tracing_subscriber::prelude::*;
 
 fn setup_logs() {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
         if std::env::var("RUST_LOG").is_err() {
-            // export RUST_LOG=reqwest=trace
-            // unset RUST_LOG
-            std::env::set_var(
-                "RUST_LOG",
-                "microsoft_azure_client=trace,integration_test=trace,reqwest=trace",
-            );
+            let current_package_name = env!("CARGO_PKG_NAME");
+            let log_env_var_variable =
+                format!("{current_package_name}=trace,integration_test=trace,reqwest=trace");
+            std::env::set_var("RUST_LOG", log_env_var_variable);
         }
-        std::env::set_var("RUST_LOG_STYLE", "auto");
-        env_logger::builder()
-            //.is_test(true) // Выводить логи только в случае ошибки
-            .try_init() // Позволяет инициализировать много раз
-            .ok();
+
+        // Поддержка стандартных вызовов log у других библиотек
+        tracing_log::LogTracer::init().expect("Log proxy set failed");
+
+        // Слой фильтрации сообщений
+        let env_filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| {
+                tracing_subscriber::EnvFilter::default().add_directive(tracing::Level::DEBUG.into())
+            });
+        let env_print_layer = tracing_subscriber::fmt::layer()
+            .compact()
+            .with_ansi(false) // Disable colors
+            .with_writer(std::io::stdout);
+        let env_layer = env_filter_layer.and_then(env_print_layer);
+
+        // Error trace capture layer
+        let err_layer = tracing_error::ErrorLayer::default();
+
+        // Собираем все слои вместе
+        let reg = tracing_subscriber::registry()
+            //.with(trace_layer)
+            .with(env_layer)
+            .with(err_layer);
+
+        tracing::subscriber::set_global_default(reg).expect("Log subscriber set failed");
     })
 }
 

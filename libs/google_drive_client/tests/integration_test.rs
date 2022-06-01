@@ -1,43 +1,48 @@
-use std::{
-    path::{
-        PathBuf
-    }, 
-    sync::{
-        Once
-    }
-};
-use tracing::{
-    debug,
-    info
-};
-use reqwest::{
-    Client
-};
-use google_drive_client::{
-    GoogleDriveClient,
-    GoogleDriveUploadTask
-};
-
+use google_drive_client::{GoogleDriveClient, GoogleDriveUploadTask};
+use reqwest::Client;
+use std::{path::PathBuf, sync::Once};
+use tracing::{debug, info};
+use tracing_subscriber::prelude::*;
 
 fn setup_logs() {
     static ONCE: Once = Once::new();
-    ONCE.call_once(||{
-        if std::env::var("RUST_LOG").is_err(){
-            // export RUST_LOG=reqwest=trace
-            // unset RUST_LOG
-            std::env::set_var("RUST_LOG", "google_drive_client=trace,integration_test=trace,reqwest=trace");
+    ONCE.call_once(|| {
+        if std::env::var("RUST_LOG").is_err() {
+            let current_package_name = env!("CARGO_PKG_NAME");
+            let log_env_var_variable =
+                format!("{current_package_name}=trace,integration_test=trace,reqwest=trace");
+            std::env::set_var("RUST_LOG", log_env_var_variable);
         }
-        std::env::set_var("RUST_LOG_STYLE", "auto");
-        env_logger::builder()
-            //.is_test(true) // Выводить логи только в случае ошибки
-            .try_init() // Позволяет инициализировать много раз
-            .ok();
+
+        // Поддержка стандартных вызовов log у других библиотек
+        tracing_log::LogTracer::init().expect("Log proxy set failed");
+
+        // Слой фильтрации сообщений
+        let env_filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| {
+                tracing_subscriber::EnvFilter::default().add_directive(tracing::Level::DEBUG.into())
+            });
+        let env_print_layer = tracing_subscriber::fmt::layer()
+            .compact()
+            .with_ansi(false) // Disable colors
+            .with_writer(std::io::stdout);
+        let env_layer = env_filter_layer.and_then(env_print_layer);
+
+        // Error trace capture layer
+        let err_layer = tracing_error::ErrorLayer::default();
+
+        // Собираем все слои вместе
+        let reg = tracing_subscriber::registry()
+            //.with(trace_layer)
+            .with(env_layer)
+            .with(err_layer);
+
+        tracing::subscriber::set_global_default(reg).expect("Log subscriber set failed");
     })
 }
 
-
 #[tokio::test]
-async fn library_integration_test(){
+async fn library_integration_test() {
     setup_logs();
 
     let key = yup_oauth2::read_service_account_key("env/test_google_drive_gi_auth_new.json")
@@ -63,7 +68,8 @@ async fn library_integration_test(){
 
     info!("Google drive client created");
 
-    let parent_folder = client.get_folder_for_id("18xmVr0MGGLximw6TgPeWUZp9aEf81cCc")
+    let parent_folder = client
+        .get_folder_for_id("18xmVr0MGGLximw6TgPeWUZp9aEf81cCc")
         .await
         .expect("Folder request failed")
         .expect("Folder can not be empty");
@@ -83,7 +89,7 @@ async fn library_integration_test(){
         file_path,
         parent_folder: &sub_folder,
         owner_email: Some("devnulpavel@gmail.com"),
-        owner_domain: None
+        owner_domain: None,
     };
     info!("Google drive task created");
 

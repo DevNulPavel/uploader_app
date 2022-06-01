@@ -7,7 +7,6 @@ use crate::{
     json_helpers::ParseJson,
     responses::{ResponseWrapper, TokenResponse, UploadResponse},
 };
-// use backtrace::Backtrace as BacktraceNoStd;
 use reqwest::{
     multipart::{Form, Part},
     Body, Client,
@@ -16,7 +15,9 @@ use std::path::PathBuf;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, Instrument};
+// use backtrace::Backtrace as BacktraceNoStd;
 
+/// Клиент для работы с отгрузкой Facebook instant games
 pub struct FacebookInstantClient {
     http_client: Client,
     app_id: String,
@@ -24,11 +25,13 @@ pub struct FacebookInstantClient {
 }
 
 impl FacebookInstantClient {
+    /// Создаем новы клиент для работы с Facebook instant
     pub async fn new(
         http_client: Client,
         app_id: String,
         app_secret: String,
     ) -> Result<Self, FacebookInstantError> {
+        // Делаем запрос на получение токена работы с FB
         let token_info = http_client
             .get("https://graph.facebook.com/oauth/access_token")
             .query(&[
@@ -41,6 +44,7 @@ impl FacebookInstantClient {
             .await
             .map_err(convert_error!(Request, "Token request"))?
             .text()
+            .in_current_span()
             .await
             .map_err(convert_error!(ResponseReceiving, "Token request"))?
             .parse_json_with_data_err::<ResponseWrapper<TokenResponse>>()
@@ -57,6 +61,7 @@ impl FacebookInstantClient {
         })
     }
 
+    /// Непосредтственно выгрузка билда
     pub async fn upload(
         &self,
         zip_file_path: PathBuf,
@@ -86,7 +91,7 @@ impl FacebookInstantClient {
             });
         }
 
-        // Сразу получим имя фапйлика
+        // Сразу получим имя файлика
         let file_name = match zip_file_path.as_path().file_name().and_then(|v| v.to_str()) {
             Some(v) => v,
             None => {
@@ -106,8 +111,7 @@ impl FacebookInstantClient {
             .await
             .map_err(convert_error!(IO, "Zip file metadata"))?
             .len();
-        let reader = FramedRead::new(file, BytesCodec::new());
-        let body = Body::wrap_stream(reader);
+        let body = Body::wrap_stream(FramedRead::new(file, BytesCodec::new()));
 
         // Оформляем в multipart
         let multipart = Form::new()
@@ -122,6 +126,7 @@ impl FacebookInstantClient {
                     .map_err(convert_error!(Request, "Multipart request building"))?,
             );
 
+        // Выполняем выгрузку
         let response = self
             .http_client
             .post(format!(
@@ -139,6 +144,7 @@ impl FacebookInstantClient {
                 "Uploading request, error status"
             ))?
             .text()
+            .in_current_span()
             .await
             .map_err(convert_error!(
                 ResponseReceiving,
@@ -158,7 +164,7 @@ impl FacebookInstantClient {
         // ext=1654267178&
         // hash=AeTBYbnFdO2aD2mMf3o
 
-        // Url-decoded:
+        // Url-decoded game_url:
         // https://apps-420544052753044.apps.fbsbx.com/instant-bundle/177318527884154/5275548972507693/index.html?__cci=FQAREhIA.ARbkHwKtTJDaJWqMw26tTsrfLT0al1jLa0I8vhMPYpxufB3i&
 
         // https://www.facebook.com/gaming/play/420544052753044/?

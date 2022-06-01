@@ -8,9 +8,12 @@ use std::{error::Error as StdError, fmt::Display};
 #[derive(Deserialize, Debug)]
 pub struct ErrorData {
     pub message: Option<String>,
+
     #[serde(rename = "type")]
     pub err_type: Option<String>,
+
     pub code: Option<String>,
+
     pub fbtrace_id: Option<String>,
 }
 
@@ -57,5 +60,5 @@ pub struct TokenResponse {
 
 #[derive(Deserialize, Debug)]
 pub struct UploadResponse {
-    pub success: bool
+    pub success: bool,
 }

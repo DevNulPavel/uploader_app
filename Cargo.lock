@@ -45,7 +45,6 @@ name = "amazon_client"
 version = "1.0.0"
 dependencies = [
  "dirs",
- "env_logger 0.8.2",
  "futures",
  "http",
  "reqwest",
@@ -56,6 +55,9 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+ "tracing-error",
+ "tracing-log",
+ "tracing-subscriber",
  "url",
 ]
 
@@ -96,7 +98,6 @@ version = "1.0.0"
 dependencies = [
  "bytes 1.1.0",
  "dirs",
- "env_logger 0.9.0",
  "futures",
  "hyper",
  "hyper-rustls 0.23.0",
@@ -109,6 +110,9 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+ "tracing-error",
+ "tracing-log",
+ "tracing-subscriber",
  "url",
 ]
 
@@ -477,32 +481,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "env_logger"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f26ecb66b4bdca6c1409b40fb255eefc2bd4f6d135dab3c3124f80ffa2a9661e"
-dependencies = [
- "atty",
- "humantime",
- "log",
- "regex",
- "termcolor",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b2cf0344971ee6c64c31be0d530793fba457d322dfec2810c453d0ef228f9c3"
-dependencies = [
- "atty",
- "humantime",
- "log",
- "regex",
- "termcolor",
-]
-
-[[package]]
 name = "event-listener"
 version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -715,8 +693,6 @@ name = "google_drive_client"
 version = "1.0.0"
 dependencies = [
  "anyhow",
- "dirs",
- "env_logger 0.9.0",
  "futures",
  "into-result",
  "mime",
@@ -730,6 +706,8 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-error",
+ "tracing-log",
+ "tracing-subscriber",
  "url",
  "yup-oauth2",
 ]
@@ -739,8 +717,6 @@ name = "google_play_client"
 version = "1.0.0"
 dependencies = [
  "cow_arc",
- "dirs",
- "env_logger 0.9.0",
  "futures",
  "quick-error 2.0.0",
  "reqwest",
@@ -751,6 +727,9 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+ "tracing-error",
+ "tracing-log",
+ "tracing-subscriber",
  "url",
  "yup-oauth2",
 ]
@@ -878,12 +857,6 @@ name = "humansize"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02296996cb8796d7c6e3bc2d9211b7802812d36999a51bb754123ead7d37d026"
-
-[[package]]
-name = "humantime"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c1ad908cc71012b7bea4d0c53ba96a8cba9962f048fa68d143376143d863b7a"
 
 [[package]]
 name = "hyper"
@@ -1197,8 +1170,6 @@ dependencies = [
  "async-channel",
  "bytes 1.1.0",
  "cow_arc",
- "dirs",
- "env_logger 0.9.0",
  "futures",
  "humansize",
  "quick-error 2.0.0",
@@ -1208,6 +1179,8 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-error",
+ "tracing-log",
+ "tracing-subscriber",
  "url",
  "zip",
 ]
@@ -2145,15 +2118,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
-name = "termcolor"
-version = "1.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dfed899f0eb03f32ee8c6a0aabdb8a7949659e3466561fc0adf54e26d88c5f4"
-dependencies = [
- "winapi-util",
-]
-
-[[package]]
 name = "textwrap"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2786,15 +2750,6 @@ name = "winapi-i686-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
-
-[[package]]
-name = "winapi-util"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70ec6ce85bb158151cae5e5c87f95a8e97d2c0c4b001223f33a334e3ce5de178"
-dependencies = [
- "winapi",
-]
 
 [[package]]
 name = "winapi-x86_64-pc-windows-gnu"

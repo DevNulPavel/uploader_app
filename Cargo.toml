@@ -30,7 +30,7 @@ image = "0.23"   # qrcode библиотека пока что требует и
 yup-oauth2 = "7"
 tap = "1"
 chrono = "0.4"
-any_field_is_some = {path = "libs/any_field_is_some"}
+any_field_is_some_macro = {path = "libs/any_field_is_some_macro"}
 app_center_client = {path = "libs/app_center_client"}
 google_drive_client = {path = "libs/google_drive_client"}
 google_play_client = {path = "libs/google_play_client"}
@@ -63,6 +63,5 @@ members = [
     "libs/amazon_client",
     "libs/microsoft_azure_client",
     "libs/facebook_instant_client",
-    "libs/any_field_is_some",
-    "libs/any_field_is_some_derive"
+    "libs/any_field_is_some_macro"
 ]

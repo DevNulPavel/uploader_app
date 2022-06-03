@@ -1,0 +1,19 @@
+[package]
+name = "any_field_is_some_macro"
+version = "0.1.0"
+authors = ["Pavel Ershov <pershov@game-insight.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# [bin]
+# proc-macro = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = {version = "1", features = ["full"]}
+
+[dev-dependencies]

@@ -262,7 +262,7 @@ fn setup_logs() {
 
 fn main() {
     // Активируем логирование и настраиваем уровни вывода
-    let _guard = setup_logs();
+    setup_logs();
 
     // Запускаем асинхронный рантайм
     let runtime = Builder::new_multi_thread()

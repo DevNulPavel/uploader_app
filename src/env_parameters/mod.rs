@@ -1,27 +1,20 @@
-#[macro_use] mod macros; // Специально самый первый
+#[macro_use]
+mod macros; // Специально самый первый
 mod subtypes;
+#[cfg(test)]
+mod tests;
 mod traits;
-#[cfg(test)] mod tests;
 
-use any_field_is_some::{
-    AnyFieldIsSome
-};
-use self::{
-    traits::{
-        EnvParams
-    }
-};
-pub use self::{
-    subtypes::{
-        *
-    }
-};
+pub use self::subtypes::*;
+use self::traits::EnvParams;
+use any_field_is_some_macro::any_field_is_some;
 
 // TODO: Clap поддерживает и переменные окружения как оказалось
 
 macro_rules! describe_env_values {
     ( $( $val: ident: $type_id:ident ),* ) => {
-        #[derive(AnyFieldIsSome, Debug)]
+        #[derive(Debug)]
+        #[any_field_is_some]
         pub struct AppEnvValues{
             $( pub $val: Option<$type_id> ),*
         }
@@ -30,12 +23,7 @@ macro_rules! describe_env_values {
                 let params = AppEnvValues{
                     $( $val: $type_id::try_parse() ),*
                 };
-            
-                let is_some = params.any_field_is_some();
-                if !is_some{
-                    panic!("Empty enviroment");
-                }
-            
+
                 params
             }
             pub fn get_possible_env_variables() -> Vec<&'static str>{

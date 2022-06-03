@@ -71,14 +71,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "any_field_is_some"
-version = "0.1.0"
-dependencies = [
- "any_field_is_some_derive",
-]
-
-[[package]]
-name = "any_field_is_some_derive"
+name = "any_field_is_some_macro"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
@@ -2497,7 +2490,7 @@ name = "uploader_app"
 version = "1.0.0"
 dependencies = [
  "amazon_client",
- "any_field_is_some",
+ "any_field_is_some_macro",
  "app_center_client",
  "async-trait",
  "chrono",

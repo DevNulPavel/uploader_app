@@ -48,7 +48,7 @@ pub struct GooglePlayRequestBuilder {
     method: Method,
     path_segments: CowArc<Vec<String>>
 }
-impl<'a> GooglePlayRequestBuilder {
+impl GooglePlayRequestBuilder {
     pub fn new(http_client: Client,
                base_url: Url,
                package_name: String,

@@ -1,3 +1,6 @@
+// Включаем фичу трассировки макросов
+// #![feature(trace_macros)]
+
 mod app_parameters;
 mod env_parameters;
 mod result_senders;

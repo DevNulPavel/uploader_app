@@ -1,3 +1,6 @@
+// Непосредственно само включение трассировки макросов после включения фичи в main.rs
+// trace_macros!(true);
+
 #[macro_use]
 mod macros; // Специально самый первый
 mod subtypes;
@@ -16,7 +19,7 @@ macro_rules! describe_env_values {
         #[derive(Debug)]
         #[any_field_is_some]
         pub struct AppEnvValues{
-            $( pub $val: Option<$type_id> ),*
+            $( pub $val: std::option::Option<$type_id> ),*
         }
         impl AppEnvValues {
             pub fn parse() -> AppEnvValues {

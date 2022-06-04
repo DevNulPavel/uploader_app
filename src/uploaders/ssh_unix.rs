@@ -6,7 +6,7 @@ use std::{
     io::{
         self,
         Read,
-        Write
+        Write as IOWrite
     },
     net::{
         TcpStream,
@@ -17,7 +17,9 @@ use std::{
     fmt::{
         Display,
         Formatter,
-        self
+        self,
+        Write as FmtWrite,
+        Error as FmtError
     },
     error::{
         self
@@ -76,7 +78,8 @@ enum SshError{
     AuthFailed,
     DirectoryCreateFailed(i32),
     InvalidTargetFolder(&'static str),
-    InvalidFilePath(PathBuf)
+    InvalidFilePath(PathBuf),
+    FormattingError(FmtError)
 }
 impl Display for SshError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -98,6 +101,11 @@ impl From<io::Error> for SshError{
 impl From<ResolveError> for SshError{
     fn from(err: ResolveError) -> Self {
         SshError::DNSError(Box::new(err))
+    }
+}
+impl From<FmtError> for SshError{
+    fn from(err: FmtError) -> Self {
+        SshError::FormattingError(err)
     }
 }
 
@@ -301,10 +309,10 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment,
         // Финальное сообщение
         let names_str = local_filenames
             .into_iter()
-            .fold(String::new(), |mut prev, n|{
-                prev.push_str(&format!("\n- {}", n));
-                prev
-            });
+            .try_fold(String::new(), |mut prev, n|{
+                write!(prev, "\n- {}", n)?;
+                Result::<String, std::fmt::Error>::Ok(prev)
+            })?;
         let message = format!("SSH uploading finished:{}", names_str);
 
         Ok(UploadResultData{

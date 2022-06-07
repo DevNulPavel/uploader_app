@@ -3,6 +3,7 @@ use crate::{app_parameters::SSHParams, env_parameters::SSHEnvironment};
 use image::EncodableLayout;
 use std::{
     borrow::Cow,
+    fmt::Write,
     path::{Path, PathBuf},
     process::{Command, Output, Stdio},
     str::from_utf8,
@@ -49,6 +50,9 @@ enum SshError {
 
     #[error("Source file is missing or invalid path")]
     InvalidSourceFilePath(PathBuf),
+
+    #[error("Format error")]
+    FormatError(std::fmt::Error),
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -163,20 +167,23 @@ fn execute_scp_uploading(
     source_file: &Path,
 ) -> Result<(), SshError> {
     #[rustfmt::skip]
-    let command = Command::new(&ssh_info.scp_executable_path)
-        .args([
-            "-i", &ssh_info.env_params.key_file,
-            &format!("{}", source_file.display()), // TODO: Лишнее выделение памяти
-            &format!("{}@{}:{}/", ssh_info.env_params.user, ssh_info.env_params.server, target_dir.display()),
-        ])
-        .stdin(Stdio::piped())  // Возможны проблемы на винде, поэтому всегда piped
-        .stdout(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
-        .stderr(Stdio::piped()); // Возможны проблемы на винде, поэтому всегда piped
-        
+    let mut command = Command::new(&ssh_info.scp_executable_path);
+
+    #[rustfmt::skip]
+    command.args([
+        "-i", &ssh_info.env_params.key_file,
+        &format!("{}", source_file.display()), // TODO: Лишнее выделение памяти
+        &format!("{}@{}:{}/", ssh_info.env_params.user, ssh_info.env_params.server, target_dir.display()),
+    ])
+    .stdin(Stdio::piped())  // Возможны проблемы на винде, поэтому всегда piped
+    .stdout(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
+    .stderr(Stdio::piped()); // Возможны проблемы на винде, поэтому всегда piped
+
     debug!("Execute upload command: {:?}", command);
 
     #[rustfmt::skip]
-    let output = command.spawn()
+    let output = command
+        .spawn()
         .map_err(|err| SshError::SpawnFail{ err })?
         .wait_with_output()
         .map_err(|err| SshError::SpawnWaitFail { err })?;
@@ -253,10 +260,14 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment, app_params: SSHParams) ->
         }
 
         // Финальное сообщение
-        let names_str = filenames.into_iter().fold(String::new(), |mut prev, n| {
-            prev.push_str(&format!("\n- {}", n));
-            prev
-        });
+        let names_str = filenames
+            .into_iter()
+            .try_fold(String::new(), |mut prev, n| {
+                write!(prev, "\n- {}", n)?;
+                // prev.push_str(&format!());
+                <Result<String, std::fmt::Error>>::Ok(prev)
+            })
+            .map_err(SshError::FormatError)?;
         let message = format!("SSH uploading finished:{}", names_str);
 
         Ok(UploadResultData {

@@ -151,7 +151,9 @@ fn get_remote_abs_path<'a>(
 
 /// Создаем конкретную директорию для файлика на сервере
 fn create_result_folder(ssh_info: &SshExecuteInfo, path: &Path) -> Result<(), SshError> {
-    execute_ssh_command_no_output(ssh_info, &format!("mkdir -p {}", path.display()))
+    let command = format!("mkdir -p {}", path.display());
+    debug!("Execute command: {}", command);
+    execute_ssh_command_no_output(ssh_info, &command)
 }
 
 /// Выполняем копирование файлика на сервер с помощью утилиты scp
@@ -161,7 +163,7 @@ fn execute_scp_uploading(
     source_file: &Path,
 ) -> Result<(), SshError> {
     #[rustfmt::skip]
-    let output = Command::new(&ssh_info.scp_executable_path)
+    let command = Command::new(&ssh_info.scp_executable_path)
         .args([
             "-i", &ssh_info.env_params.key_file,
             &format!("{}", source_file.display()), // TODO: Лишнее выделение памяти
@@ -169,8 +171,12 @@ fn execute_scp_uploading(
         ])
         .stdin(Stdio::piped())  // Возможны проблемы на винде, поэтому всегда piped
         .stdout(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
-        .stderr(Stdio::piped()) // Возможны проблемы на винде, поэтому всегда piped
-        .spawn()
+        .stderr(Stdio::piped()); // Возможны проблемы на винде, поэтому всегда piped
+        
+    debug!("Execute upload command: {:?}", command);
+
+    #[rustfmt::skip]
+    let output = command.spawn()
         .map_err(|err| SshError::SpawnFail{ err })?
         .wait_with_output()
         .map_err(|err| SshError::SpawnWaitFail { err })?;

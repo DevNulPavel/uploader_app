@@ -6,6 +6,7 @@
 
 use proc_macro2::Ident;
 // use quote::ToTokens;
+// use quote::ToTokens;
 use syn::{parse_macro_input, parse_quote, ItemStruct, Type};
 
 #[proc_macro_attribute]
@@ -18,7 +19,7 @@ pub fn any_field_is_some(
 
     // Проверяем, что мы работаем со структурой
     for field in struct_data.fields.iter() {
-        if let (Some(name), Type::Path(type_path)) = (&field.ident, &field.ty) {
+        if let (Some(ident), Type::Path(type_path)) = (&field.ident, &field.ty) {
             // let mut punct: Punctuated<PathSegment, Token!(::)> = Punctuated::new();
             // punct.push_value(PathSegment {
             //     arguments: Default::default(),
@@ -41,17 +42,27 @@ pub fn any_field_is_some(
             //     );
             // }
 
+            let field_span = ident.span();
+
             if let Some(last) = type_path.path.segments.last() {
                 // let option_type: Ident = Ident::new("Option", Span::call_site());
+
                 let option_type: Ident = parse_quote!(Option);
                 if !last.ident.eq(&option_type) {
                     panic!(
-                        r#"Field with name "{}" must be "{}", found "{}""#,
-                        name, option_type, last.ident
+                        r#"Field with name "{}" must be "{}", found "{}" at line {}"#,
+                        ident,
+                        option_type,
+                        last.ident,
+                        field_span.start().line
                     );
                 }
             } else {
-                panic!("Type is missing for field: {}", name);
+                panic!(
+                    r#"Type is missing for field "{}" at line {}"#,
+                    ident,
+                    field_span.start().line
+                );
             }
         }
     }

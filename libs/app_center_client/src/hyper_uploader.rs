@@ -20,7 +20,7 @@ use serde::{
 // use bytes::{
 //     Bytes
 // };
-use tracing::{
+use log::{
     debug
 };
 use reqwest::{

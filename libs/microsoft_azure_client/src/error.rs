@@ -1,19 +1,18 @@
 use super::responses::{ErrorResponseValue, SubmissionStatusResponse};
-use serde_json_string_parse::JsonParseError;
 use quick_error::quick_error;
-use tracing_error::SpanTrace;
+use serde_json_string_parse::JsonParseError;
 
 quick_error! {
     #[derive(Debug)]
     pub enum MicrosoftAzureError{
         /// Ошибка парсинга контекста с дополнительной информацией того места, где произашла ошибка
-        UrlParseError(context: SpanTrace, err: url::ParseError){
-            from(err: url::ParseError) -> (SpanTrace::capture(), err)
+        UrlParseError(err: url::ParseError){
+            from()
         }
 
         /// Ошибка при работе с сетью
-        NetErr(context: SpanTrace, err: reqwest::Error){
-            from(err: reqwest::Error) -> (SpanTrace::capture(), err)
+        NetErr(err: reqwest::Error){
+            from()
         }
 
         /// Токен просрочен
@@ -22,19 +21,19 @@ quick_error! {
         }
 
         /// Ошибка в парсинге JSON ответа
-        JsonParsingError(context: SpanTrace, err: JsonParseError<String>){
-            from(err: JsonParseError<String>) -> (SpanTrace::capture(), err)
+        JsonParsingError(err: JsonParseError<String>){
+            from()
         }
 
         /// REST API вернуло ошибку
-        RestApiResponseError(context: SpanTrace, err: ErrorResponseValue){
-            from(err: ErrorResponseValue) -> (SpanTrace::capture(), err)
+        RestApiResponseError(err: ErrorResponseValue){
+            from()
             //from()                                  // Конвертируем из типа ErrorResponseValue
             //from(err: ErrorResponse) -> (err.error) // Конвертируем из типа ErrorResponse
         }
 
         /// Ошибка парсинга урла на компоненты в RequestBuilder
-        UnvalidUrlSegments(context: SpanTrace){
+        UnvalidUrlSegments {
         }
 
         /// Ошибка построения урла через RequestBuilder
@@ -46,8 +45,8 @@ quick_error! {
         }
 
         /// Системная IO ошибка
-        IOError(context: SpanTrace, err: std::io::Error){
-            from(err: std::io::Error) -> (SpanTrace::capture(), err)
+        IOError(err: std::io::Error){
+            from()
         }
 
         /// Нету файлика по этому пути
@@ -55,11 +54,11 @@ quick_error! {
         }
 
         /// Проблема красивой записи размера
-        HumanSizeError(context: SpanTrace, info: String){
+        HumanSizeError(info: String){
         }
 
         /// Не выгрузилось нормально на сервер
-        UploadingError(context: SpanTrace, info: String){
+        UploadingError(info: String){
         }
 
         /// Ошибка при открытии файлика

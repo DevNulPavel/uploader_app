@@ -9,8 +9,7 @@ use crate::{
 };
 use serde_json_string_parse::ParseJson;
 use std::path::Path;
-use tracing::debug;
-use tracing::{instrument, Instrument};
+use log::debug;
 
 /// Внутренняя структура по работе с submission
 pub struct ProductionSubmission {
@@ -20,7 +19,6 @@ pub struct ProductionSubmission {
 
 impl ProductionSubmission {
     /// Инициализируем новый экземпляр выливки
-    #[instrument(skip(request_builder))]
     pub async fn start_new(
         request_builder: RequestBuilder,
     ) -> Result<ProductionSubmission, MicrosoftAzureError> {
@@ -31,14 +29,14 @@ impl ProductionSubmission {
             .method(reqwest::Method::POST)
             .join_path("submissions".to_owned())
             .build()
-            .in_current_span()
+            
             .await?
             .header(reqwest::header::CONTENT_LENGTH, "0")
             .send()
-            .in_current_span()
+            
             .await?
             .text()
-            .in_current_span()
+            
             .await?
             .parse_json_with_data_err::<DataOrErrorResponse<SubmissionCreateResponse>>()?
             .into_result()?;
@@ -53,7 +51,6 @@ impl ProductionSubmission {
         })
     }
 
-    #[instrument(skip(self, zip_file_path, submission_name))]
     pub async fn upload_build(
         &mut self,
         zip_file_path: &Path,
@@ -94,11 +91,11 @@ impl ProductionSubmission {
             .clone()
             .method(reqwest::Method::PUT)
             .build()
-            .in_current_span()
+            
             .await?
             .json(&new_params)
             .send()
-            .in_current_span()
+            
             .await?
             .text()
             .await?
@@ -114,17 +111,17 @@ impl ProductionSubmission {
 
         // Выполняем непосредственно выгрузку на сервер нашего архива
         perform_blob_file_uploading(&http_client, &append_data_url, zip_file_path)
-            .in_current_span()
+            
             .await?;
 
         // Пытаемся закоммитить
         commit_changes(&self.request_builder)
-            .in_current_span()
+            
             .await?;
 
         // Ждем завершения коммита
         wait_commit_finished(&self.request_builder)
-            .in_current_span()
+            
             .await?;
 
         Ok(())

@@ -1,7 +1,7 @@
 use reqwest::{
     Method
 };
-use tracing::{
+use log::{
     debug
 };
 use serde_json::{
@@ -115,7 +115,7 @@ impl GoogleDriveFile {
             .text()
             .await?;
 
-        debug!(res = %text, "Owner update resp");
+        debug!("Owner update resp: {text}");
             // .json::<FilePermissionResponse>()
             // .await?;
 

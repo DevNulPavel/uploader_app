@@ -3,7 +3,7 @@ use crate::{
     request_builder::RequestBuilder,
     responses::{DataOrErrorResponse, FlightSubmissionCommitResponse, SubmissionStatusResponse},
 };
-use tracing::debug;
+use log::debug;
 
 /// Данный метод занимается тем, что коммитит изменения на сервере
 /// Описание: `https://docs.microsoft.com/en-us/windows/uwp/monetize/commit-a-flight-submission`

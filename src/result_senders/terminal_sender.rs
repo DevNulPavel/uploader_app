@@ -1,33 +1,17 @@
-use std::{
-    error::{
-        Error
-    }
-};
-use async_trait::{
-    async_trait
-};
-use tracing::{
-    error,
-    info
-};
-use crate::{
-    uploaders::{
-        UploadResultData
-    }
-};
-use super::{
-    ResultSender
-};
+use super::ResultSender;
+use crate::uploaders::UploadResultData;
+use async_trait::async_trait;
+use log::{error, info};
+use std::error::Error;
 
-pub struct TerminalSender{
-}
+pub struct TerminalSender {}
 // #[async_trait(?Send)]
 #[async_trait]
 impl ResultSender for TerminalSender {
-    async fn send_result(&self, result: &UploadResultData){
-        info!(%result, "Uploading task success");
+    async fn send_result(&self, result: &UploadResultData) {
+        info!("Uploading task success: {result}");
     }
-    async fn send_error(&self, err: &(dyn Error + Send + Sync)){
-        error!(%err, "Uploading task error");
+    async fn send_error(&self, err: &(dyn Error + Send + Sync)) {
+        error!("Uploading task error: {err}");
     }
 }

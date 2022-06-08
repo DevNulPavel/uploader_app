@@ -3,6 +3,7 @@ use crate::{
     env_parameters::IOSEnvironment,
     uploaders::{UploadResult, UploadResultData},
 };
+use log::{debug, error};
 use std::{
     error::{self},
     fmt::{self, Display, Formatter},
@@ -13,7 +14,6 @@ use std::{
 };
 use tap::TapFallible;
 use tokio::{process::Command, time::sleep};
-use tracing::{debug, error, instrument};
 
 /*
 
@@ -47,10 +47,7 @@ impl error::Error for IOSError {}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[instrument(skip(env_params, app_params))]
 pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) -> UploadResult {
-    let _span = tracing::info_span!("upload_in_ios");
-
     // Проверка наличия файлика
     let path = Path::new(&app_params.ipa_file_path);
     if !path.exists() {
@@ -97,7 +94,7 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
             .wait_with_output()
             .await
             .tap_err(|err| {
-                error!(%err, "xcrun start failed");
+                error!("xcrun start failed: {err}");
             })?;
 
         // Проверим ошибку
@@ -127,7 +124,7 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
     // Получим вывод приложения
     let text = String::from_utf8(output.stdout)
         .map_err(|err| Box::new(IOSError::OutputParseFailed(err)))?;
-    debug!(%text, "Uploading util output");
+    debug!("Uploading util output: {text}");
 
     // Финальное сообщение
     let message = format!("IOS uploading finished:\n- {}", file_name);

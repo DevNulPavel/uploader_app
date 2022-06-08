@@ -1,10 +1,9 @@
 use crate::error::MicrosoftAzureError;
 use bytes::Bytes;
+use log::{debug, error, warn};
 use reqwest::Client;
 use std::{fmt::Display, path::Path, usize};
 use tokio::{fs::File, io::AsyncReadExt, sync::mpsc, time};
-use tracing::{debug, error, warn, Instrument};
-use tracing_error::SpanTrace;
 use url::Url;
 
 /// Сколько испольузем потоков выгрузки?
@@ -38,7 +37,6 @@ async fn enable_block_mode(http_client: &Client, url: &Url) -> Result<(), Micros
         .header("x-ms-blob-type", "BlockBlob")
         .header(reqwest::header::CONTENT_LENGTH, "0")
         .send()
-        .in_current_span()
         .await?
         .error_for_status()?;
     Ok(())
@@ -51,7 +49,7 @@ async fn upload_worker(
     result_sender: mpsc::Sender<Result<UploadResult, MicrosoftAzureError>>,
 ) {
     // Получаем задачи пока они есть и канал открыт
-    while let Ok(task) = task_receiver.recv().in_current_span().await {
+    while let Ok(task) = task_receiver.recv().await {
         // Разворачиваем задачу в параметры
         let UploadTask {
             data,
@@ -77,7 +75,6 @@ async fn upload_worker(
                     .header(reqwest::header::CONTENT_LENGTH, data.len())
                     .body(data.clone())
                     .send()
-                    .in_current_span()
                     .await?
                     .error_for_status()?;
 
@@ -88,7 +85,7 @@ async fn upload_worker(
             };
 
             // Получаем результат
-            let res = upload_fn.in_current_span().await;
+            let res = upload_fn.await;
             // Если все хорошо, сразу же отдаем результат из цикла
             if res.is_ok() {
                 break res;
@@ -100,9 +97,7 @@ async fn upload_worker(
                         "Retry uploading for url: {}, iteration: {}, res: {:?}",
                         url, iter_count, res
                     );
-                    tokio::time::sleep(time::Duration::from_secs(3))
-                        .in_current_span()
-                        .await;
+                    tokio::time::sleep(time::Duration::from_secs(3)).await;
                     continue;
                 } else {
                     break res;
@@ -110,7 +105,7 @@ async fn upload_worker(
             }
         };
         // Отправляем в канал результат выгрузки, если ошибка, то прекращаем работу просто
-        if result_sender.send(result).in_current_span().await.is_err() {
+        if result_sender.send(result).await.is_err() {
             error!("Sender channel cannot be closed in worker");
             return;
         }
@@ -174,7 +169,6 @@ async fn commit_blocks(
         .put(list_commit_url)
         .body(data)
         .send()
-        .in_current_span()
         .await?
         .error_for_status()?;
     Ok(())
@@ -185,7 +179,7 @@ fn usize_to_displayable<T: humansize::FileSize>(
     size: T,
 ) -> Result<impl Display, MicrosoftAzureError> {
     size.file_size(humansize::file_size_opts::BINARY)
-        .map_err(|err| MicrosoftAzureError::HumanSizeError(SpanTrace::capture(), err))
+        .map_err(MicrosoftAzureError::HumanSizeError)
 }
 
 /// Выполнение выгрузки непосредственно файлика с билдом
@@ -197,15 +191,13 @@ pub async fn perform_blob_file_uploading(
     debug!("Microsoft Azure: file uploading start");
 
     // Первым этапом идет выставление режима AppendBlob для выгрузки
-    enable_block_mode(http_client, url)
-        .in_current_span()
-        .await?;
+    enable_block_mode(http_client, url).await?;
 
     // Подготавливаем файлик для потоковой выгрузки
-    let mut source_file = File::open(file_path).in_current_span().await?;
+    let mut source_file = File::open(file_path).await?;
 
     // Получаем суммарный размер данных
-    let source_file_length = source_file.metadata().in_current_span().await?.len();
+    let source_file_length = source_file.metadata().await?.len();
 
     // Создаем каналы для задач и результатов
     let (task_sender, task_receiver) =
@@ -234,10 +226,7 @@ pub async fn perform_blob_file_uploading(
         let mut buffer = vec![0_u8; buffer_size_limit as usize];
 
         // Читаем из файлика данные в буффер
-        let read_size = source_file
-            .read_exact(&mut buffer)
-            .in_current_span()
-            .await?;
+        let read_size = source_file.read_exact(&mut buffer).await?;
 
         // Отнимаем нужное значения размера данных
         data_left -= read_size as i64;
@@ -254,10 +243,7 @@ pub async fn perform_blob_file_uploading(
             })
             .await
             .map_err(|e| {
-                MicrosoftAzureError::UploadingError(
-                    SpanTrace::capture(),
-                    format!("Upload task send failed ({})", e),
-                )
+                MicrosoftAzureError::UploadingError(format!("Upload task send failed ({})", e))
             })?;
 
         // +1 к индексу после отправки
@@ -279,7 +265,6 @@ pub async fn perform_blob_file_uploading(
                 // Канал по каким-то причинал закрыт, значит генерируем ошибку
                 Result::Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
                     return Err(MicrosoftAzureError::UploadingError(
-                        SpanTrace::capture(),
                         "Receive channel cannot be closed in progress of uploading".to_owned(),
                     ));
                 }
@@ -298,13 +283,12 @@ pub async fn perform_blob_file_uploading(
     // Проверим, что все ок
     if data_left != 0 {
         return Err(MicrosoftAzureError::UploadingError(
-            SpanTrace::capture(),
             "Left data size must be zero after uploading".to_owned(),
         ));
     }
 
     // Получаем накопленные результаты, которые еще не получили
-    while let Some(result) = result_receiver.recv().in_current_span().await {
+    while let Some(result) = result_receiver.recv().await {
         let result = result?;
         blocks.push(result);
     }

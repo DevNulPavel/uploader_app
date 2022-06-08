@@ -1,6 +1,7 @@
 use super::upload_result::{UploadResult, UploadResultData};
 use crate::{app_parameters::SSHParams, env_parameters::SSHEnvironment};
 use image::EncodableLayout;
+use log::{debug, error};
 use std::{
     borrow::Cow,
     fmt::Write,
@@ -9,7 +10,6 @@ use std::{
     str::from_utf8,
 };
 use tokio::task::{spawn_blocking, JoinHandle};
-use tracing::{debug, error};
 use which::which;
 
 ////////////////////////////////////////////////////////////////////////
@@ -208,8 +208,6 @@ fn execute_scp_uploading(
 
 pub async fn upload_by_ssh(env_params: SSHEnvironment, app_params: SSHParams) -> UploadResult {
     let join: JoinHandle<Result<UploadResultData, SshError>> = spawn_blocking(move || {
-        let _span = tracing::info_span!("upload_by_ssh");
-
         // Сначала находим путь к исполняемому файлику из окружения
         let ssh_executable_path = which("ssh")?;
         debug!("SSH executable found at path: {ssh_executable_path:?}");

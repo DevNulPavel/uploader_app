@@ -1,8 +1,8 @@
 use super::{error::AmazonError, responses::AmazonTokenResponse};
+use log::debug;
 use reqwest::Client;
 use serde_json::json;
 use std::time::{Duration, Instant};
-use tracing::debug;
 
 #[derive(Debug)]
 pub struct AmazonAccessToken {

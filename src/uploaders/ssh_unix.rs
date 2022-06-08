@@ -1,74 +1,29 @@
-use std::{
-    path::{
-        Path,
-        PathBuf
-    },
-    io::{
-        self,
-        Read,
-        Write as IOWrite
-    },
-    net::{
-        TcpStream,
-        SocketAddrV4,
-        Ipv4Addr,
-        IpAddr
-    },
-    fmt::{
-        Display,
-        Formatter,
-        self,
-        Write as FmtWrite,
-        Error as FmtError
-    },
-    error::{
-        self
-    }
-};
-use tokio::{
-    task::{
-        spawn_blocking,
-        JoinHandle
-    }
-};
-use tracing::{
+use super::upload_result::{UploadResult, UploadResultData};
+use crate::{app_parameters::SSHParams, env_parameters::SSHEnvironment};
+use log::{
     debug,
     error,
     // trace,
-    instrument
 };
-use ssh2::{
-    Session
+use ssh2::Session;
+use std::{
+    error::{self},
+    fmt::{self, Display, Error as FmtError, Formatter, Write as FmtWrite},
+    io::{self, Read, Write as IOWrite},
+    net::{IpAddr, Ipv4Addr, SocketAddrV4, TcpStream},
+    path::{Path, PathBuf},
 };
+use tokio::task::{spawn_blocking, JoinHandle};
 use trust_dns_resolver::{
-    config::{
-        ResolverConfig,
-        ResolverOpts
-    },
-    error::{
-        ResolveError,
-    },
-    Resolver
-};
-use crate::{
-    app_parameters::{
-        SSHParams
-    },
-    env_parameters::{
-        SSHEnvironment
-    }
-};
-use super::{
-    upload_result::{
-        UploadResult,
-        UploadResultData
-    }
+    config::{ResolverConfig, ResolverOpts},
+    error::ResolveError,
+    Resolver,
 };
 
 ////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-enum SshError{
+enum SshError {
     SshErr(ssh2::Error),
     IO(io::Error),
     DNSError(Box<ResolveError>),
@@ -79,31 +34,30 @@ enum SshError{
     DirectoryCreateFailed(i32),
     InvalidTargetFolder(&'static str),
     InvalidFilePath(PathBuf),
-    FormattingError(FmtError)
+    FormattingError(FmtError),
 }
 impl Display for SshError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{:#?}", self)
     }
 }
-impl error::Error for SshError {
-}
-impl From<ssh2::Error> for SshError{
+impl error::Error for SshError {}
+impl From<ssh2::Error> for SshError {
     fn from(err: ssh2::Error) -> Self {
         SshError::SshErr(err)
     }
 }
-impl From<io::Error> for SshError{
+impl From<io::Error> for SshError {
     fn from(err: io::Error) -> Self {
         SshError::IO(err)
     }
 }
-impl From<ResolveError> for SshError{
+impl From<ResolveError> for SshError {
     fn from(err: ResolveError) -> Self {
         SshError::DNSError(Box::new(err))
     }
 }
-impl From<FmtError> for SshError{
+impl From<FmtError> for SshError {
     fn from(err: FmtError) -> Self {
         SshError::FormattingError(err)
     }
@@ -111,25 +65,17 @@ impl From<FmtError> for SshError{
 
 ////////////////////////////////////////////////////////////////////////
 
-#[instrument]
 fn get_valid_address(server: String) -> Result<String, SshError> {
-    let addr = if server.parse::<SocketAddrV4>().is_ok(){
+    let addr = if server.parse::<SocketAddrV4>().is_ok() {
         server
-    }else if let Ok(addr) = &server.parse::<Ipv4Addr>(){
+    } else if let Ok(addr) = &server.parse::<Ipv4Addr>() {
         SocketAddrV4::new(*addr, 22).to_string()
-    }else {
-        let resolver = Resolver::new(ResolverConfig::default(), 
-                                     ResolverOpts::default())?;
-        let response = resolver
-            .lookup_ip(server.clone())?;
-        let address = response
-            .iter()
-            .next()
-            .ok_or(SshError::EmptyDNSAddresses)?;
+    } else {
+        let resolver = Resolver::new(ResolverConfig::default(), ResolverOpts::default())?;
+        let response = resolver.lookup_ip(server.clone())?;
+        let address = response.iter().next().ok_or(SshError::EmptyDNSAddresses)?;
         match address {
-            IpAddr::V4(v4) => {
-                SocketAddrV4::new(v4, 22).to_string()
-            },
+            IpAddr::V4(v4) => SocketAddrV4::new(v4, 22).to_string(),
             _ => {
                 return Err(SshError::IpV6IsUnsupported);
             }
@@ -138,21 +84,16 @@ fn get_valid_address(server: String) -> Result<String, SshError> {
     Ok(addr)
 }
 
-#[instrument(skip(session))]
-fn try_to_auth(user: String, 
-               key_file: String, 
-               session: &Session) -> Result<(), SshError>{
-
+fn try_to_auth(user: String, key_file: String, session: &Session) -> Result<(), SshError> {
     let path = Path::new(&key_file);
-    if !path.exists(){
+    if !path.exists() {
         error!("SSH private key for does not exist");
         return Err(SshError::PrivateKeyNotFound);
     }
     debug!("SSH private key for auth");
-    let authentificated = session.userauth_pubkey_file(&user, 
-                                                       None,
-                                                       path,
-                                                       None).is_ok();
+    let authentificated = session
+        .userauth_pubkey_file(&user, None, path, None)
+        .is_ok();
     if !authentificated {
         debug!("NO auth info");
         return Err(SshError::AuthFailed);
@@ -160,12 +101,11 @@ fn try_to_auth(user: String,
     Ok(())
 }
 
-#[instrument(skip(session))]
 fn get_remote_abs_path(target_dir: &str, session: &Session) -> Result<PathBuf, SshError> {
     let input_path = Path::new(target_dir);
     let result_absolute_folder_path = if input_path.has_root() {
         input_path.to_owned()
-    }else if input_path.starts_with("~/"){
+    } else if input_path.starts_with("~/") {
         let mut channel = session.channel_session()?;
         channel.exec("echo ~")?;
         let mut output = String::new();
@@ -175,14 +115,15 @@ fn get_remote_abs_path(target_dir: &str, session: &Session) -> Result<PathBuf, S
             .join(output.trim())
             .join(input_path.strip_prefix("~/").unwrap()); // Unwrap, так как мы уже проверили выше
         res
-    }else{
-        return Err(SshError::InvalidTargetFolder("Only absolute and '~/' path supported"));
+    } else {
+        return Err(SshError::InvalidTargetFolder(
+            "Only absolute and '~/' path supported",
+        ));
     };
     Ok(result_absolute_folder_path)
 }
 
-#[instrument(skip(session))]
-fn create_result_folder(path: &Path, session: &Session) -> Result<(), SshError>{
+fn create_result_folder(path: &Path, session: &Session) -> Result<(), SshError> {
     // TODO: Exit status всегда 0 даже если есть папка
     /*let folder_exist = {
         let mut channel = session.channel_session()?;
@@ -201,46 +142,44 @@ fn create_result_folder(path: &Path, session: &Session) -> Result<(), SshError>{
             return Err(SshError::DirectoryCreateFailed(status));
         }
         channel.close()?;
-        debug!(dir = %path.display(), "Directory created");
+        debug!("Directory created: {}", path.display());
     }
     Ok(())
 }
 
-#[instrument(skip(session, result_absolute_folder_path, paths))]
-fn upload_files<'a, P>(session: &Session, 
-                       result_absolute_folder_path: &Path, 
-                       paths: &'a [P]) -> Result<Vec<&'a str>, SshError>
-where 
-    P: AsRef<Path>
+fn upload_files<'a, P>(
+    session: &Session,
+    result_absolute_folder_path: &Path,
+    paths: &'a [P],
+) -> Result<Vec<&'a str>, SshError>
+where
+    P: AsRef<Path>,
 {
     let mut local_filenames = vec![];
     local_filenames.reserve(paths.len());
-    for local_path in paths.iter(){
+    for local_path in paths.iter() {
         let local_path = local_path.as_ref();
         let local_file_name = local_path
-            .file_name()    
-            .ok_or_else(||{
-                SshError::InvalidFilePath(local_path.to_path_buf())
-            })?
+            .file_name()
+            .ok_or_else(|| SshError::InvalidFilePath(local_path.to_path_buf()))?
             .to_str()
-            .ok_or_else(||{
-                SshError::InvalidFilePath(local_path.to_path_buf())
-            })?;
+            .ok_or_else(|| SshError::InvalidFilePath(local_path.to_path_buf()))?;
         local_filenames.push(local_file_name);
-        let remote_path = result_absolute_folder_path
-                .join(local_file_name);
-        debug!(local = %local_path.display(), 
-               remote = %remote_path.display(), 
-               "Uploading start");
+        let remote_path = result_absolute_folder_path.join(local_file_name);
+        debug!(
+            "Uploading start, local: {}, remote: {}",
+            local_path.display(),
+            remote_path.display()
+        );
 
         let mut file = std::fs::File::open(&local_path)?;
         let size = file.metadata()?.len();
         let mut remote_file = session.scp_send(&remote_path, 0o644, size, None)?;
-        
-        let mut buffer = [0; 1024*64];
+
+        let mut buffer = [0; 1024 * 64];
         loop {
             let count = file.read(&mut buffer)?;
-            if count == 0{
+            if count == 0 {
                 break;
             }
             remote_file.write_all(&buffer[0..count])?;
@@ -251,22 +190,20 @@ where
         remote_file.close()?;
         remote_file.wait_close()?;
 
-        debug!(local = %local_path.display(), 
-               remote = %remote_path.display(), 
-               "Uploading finished");
+        debug!(
+            "Uploading finished, local: {}, remote: {}",
+            local_path.display(),
+            remote_path.display()
+        );
     }
     Ok(local_filenames)
 }
 
-pub async fn upload_by_ssh(env_params: SSHEnvironment, 
-                           app_params: SSHParams) -> UploadResult {
-
+pub async fn upload_by_ssh(env_params: SSHEnvironment, app_params: SSHParams) -> UploadResult {
     let join: JoinHandle<Result<UploadResultData, SshError>> = spawn_blocking(move || {
-        let _span = tracing::info_span!("upload_by_ssh");
-
         // Тип аддреса
         let addr = get_valid_address(env_params.server)?;
-        debug!(%addr, "SSH server address");
+        debug!("SSH server address: {addr}");
 
         let stream = TcpStream::connect(addr)?;
         debug!("Stream created");
@@ -281,8 +218,8 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment,
 
         // Абсолютный путь на сервере к папке
         let result_absolute_folder_path = get_remote_abs_path(&app_params.target_dir, &session)?;
-        debug!(?result_absolute_folder_path, "Absolute path");
-        
+        debug!("Absolute path: {}", result_absolute_folder_path.display());
+
         // Создание папки если надо
         create_result_folder(&result_absolute_folder_path, &session)?;
 
@@ -290,15 +227,11 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment,
         let paths: Vec<PathBuf> = app_params
             .files
             .into_iter()
-            .map(|p|{
-                PathBuf::from(&p)
-            })
+            .map(|p| PathBuf::from(&p))
             .collect();
         // Проверяем сразу, что есть все файлы перед загрузкой
         {
-            let invalid_path = paths.iter().find(|p|{
-                !p.exists()
-            });
+            let invalid_path = paths.iter().find(|p| !p.exists());
             if let Some(invalid_path) = invalid_path {
                 return Err(SshError::InvalidFilePath(invalid_path.to_owned()));
             }
@@ -309,48 +242,46 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment,
         // Финальное сообщение
         let names_str = local_filenames
             .into_iter()
-            .try_fold(String::new(), |mut prev, n|{
+            .try_fold(String::new(), |mut prev, n| {
                 write!(prev, "\n- {}", n)?;
                 Result::<String, std::fmt::Error>::Ok(prev)
             })?;
         let message = format!("SSH uploading finished:{}", names_str);
 
-        Ok(UploadResultData{
+        Ok(UploadResultData {
             install_url: None,
             message: Some(message),
-            target: "SSH"
+            target: "SSH",
         })
     });
 
     let result = join.await.expect("SSH join failed");
     match result {
         Ok(res) => Ok(res),
-        Err(err) => Err(Box::new(err))
+        Err(err) => Err(Box::new(err)),
     }
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_ssh_uploader(){
+    async fn test_ssh_uploader() {
         /*pretty_env_logger::formatted_builder()
-            // .is_test(true)
-            .filter_level(log::LevelFilter::Debug)
-            .try_init()
-            .ok();*/
+        // .is_test(true)
+        .filter_level(log::LevelFilter::Debug)
+        .try_init()
+        .ok();*/
 
-        let env_params = SSHEnvironment{
+        let env_params = SSHEnvironment {
             server: "10.51.254.143".to_owned(), // TODO: DNS name
             user: "jenkins".to_owned(),
-            key_file: "/Users/devnul/.ssh/id_rsa".to_owned()
+            key_file: "/Users/devnul/.ssh/id_rsa".to_owned(),
         };
-        let app_params = SSHParams{
-            files: vec![
-                "/Users/devnul/Downloads/Discord.dmg".to_owned()
-            ],
-            target_dir: "/volume1/builds/pi2-gplay/test_folder".to_owned()
+        let app_params = SSHParams {
+            files: vec!["/Users/devnul/Downloads/Discord.dmg".to_owned()],
+            target_dir: "/volume1/builds/pi2-gplay/test_folder".to_owned(),
         };
 
         upload_by_ssh(env_params, app_params)

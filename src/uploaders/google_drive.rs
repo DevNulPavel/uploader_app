@@ -1,12 +1,11 @@
 use super::upload_result::{UploadResult, UploadResultData};
 use crate::{app_parameters::GoogleDriveParams, env_parameters::GoogleDriveEnvironment};
 use google_drive_client::{GoogleDriveClient, GoogleDriveUploadTask};
+use log::{debug, error, info};
 use std::{path::PathBuf, time::Duration};
 use tap::TapFallible;
-use tracing::{debug, error, info, instrument};
 use yup_oauth2::{read_service_account_key, ServiceAccountAuthenticator};
 
-#[instrument(skip(client, env_params, app_params))]
 pub async fn upload_in_google_drive(
     client: reqwest::Client,
     env_params: GoogleDriveEnvironment,
@@ -18,7 +17,7 @@ pub async fn upload_in_google_drive(
     let key = read_service_account_key(env_params.auth_file)
         .await
         .tap_err(|err| {
-            error!(%err, "Credentials read failed");
+            error!("Credentials read failed: {err}");
         })?;
     info!("Google drive key read success");
 
@@ -27,7 +26,7 @@ pub async fn upload_in_google_drive(
         .build()
         .await
         .tap_err(|err| {
-            error!(%err, "Service account build failed");
+            error!("Service account build failed: {err}");
         })?;
     info!("Google drive auth success");
 
@@ -36,7 +35,7 @@ pub async fn upload_in_google_drive(
         .token(&["https://www.googleapis.com/auth/drive"])
         .await
         .tap_err(|err| {
-            error!(%err, "Token receive failed");
+            error!("Token receive failed: {err}");
         })?;
     info!("Google drive token received");
 
@@ -50,20 +49,20 @@ pub async fn upload_in_google_drive(
             .await?
             .ok_or("Target google drive folder is not found")
             .tap_err(|err| {
-                error!(%err, "Folder find failed");
+                error!("Folder find failed: {err}");
             })?;
         if let Some(sub_folder_name) = app_params.target_subfolder_name {
             folder
                 .create_subfolder_if_needed(&sub_folder_name)
                 .await
                 .tap_err(|err| {
-                    error!(%err, "Subfolder create failed");
+                    error!("Subfolder create failed: {err}");
                 })?
         } else {
             folder
         }
     };
-    debug!(folder_id = %folder.get_info().id, "Target folder received");
+    debug!("Target folder received: {}", folder.get_info().id);
 
     // Грузим файлы
     let mut results = Vec::with_capacity(app_params.files.len());
@@ -83,7 +82,7 @@ pub async fn upload_in_google_drive(
                     break result;
                 }
                 Err(err) => {
-                    error!(%err, "Upload failed");
+                    error!("Upload failed: {err}");
                     if current_retry_count < 3 {
                         current_retry_count += 1;
                         tokio::time::sleep(Duration::from_secs(20)).await;
@@ -94,7 +93,7 @@ pub async fn upload_in_google_drive(
             }
         };
 
-        debug!(?result, "Google drive uploading result");
+        debug!("Google drive uploading result: {result:?}");
         results.push(result);
     }
 

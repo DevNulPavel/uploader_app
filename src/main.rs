@@ -19,11 +19,10 @@ use self::{
 use futures::future::{join_all, select_all, Future, FutureExt};
 use std::{pin::Pin, process::exit};
 use tokio::runtime::Builder;
-use tracing::{debug, error, info, instrument};
+use log::{debug, error, info};
 
 /// Выполняем выгрузку, если вообще все выгрузки не сработали - возвращаем false
 /// Если хотя бы одна выгрузка была успешной - true
-#[instrument(skip(active_workers, result_senders))]
 async fn wait_results<W, S>(mut active_workers: Vec<W>, result_senders: Vec<Box<S>>) -> bool
 where
     W: Future<Output = UploadResult> + Unpin,
@@ -48,7 +47,7 @@ where
                         .iter()
                         .map(|sender| sender.send_error(err.as_ref()));
                     join_all(futures_iter).await;
-                    error!(%err, "Uploading task failed");
+                    error!("Uploading task failed: {err}");
                 }
             }
         }
@@ -83,7 +82,6 @@ struct UploadersResult {
     active_workers: Vec<Pin<Box<dyn Future<Output = UploadResult> + Send>>>,
 }
 
-#[instrument(skip(http_client, env_params, app_parameters))]
 fn build_uploaders(
     http_client: reqwest::Client,
     env_params: AppEnvValues,
@@ -180,12 +178,12 @@ async fn async_main() {
         )
     }));
 
-    debug!(?app_parameters, "App params");
+    debug!("App params: {app_parameters:?}");
 
     // Получаем параметры окружения
     let env_params = AppEnvValues::parse();
 
-    debug!(?env_params, "Env params");
+    debug!("Env params: {env_params:?}");
 
     // Общий клиент для запросов
     let http_client = reqwest::Client::builder()
@@ -224,7 +222,7 @@ async fn async_main() {
     }
 }
 
-fn setup_logs() {
+/*fn setup_logs() {
     use tracing_subscriber::prelude::*;
 
     // Поддержка стандартных вызовов log у других библиотек
@@ -261,11 +259,11 @@ fn setup_logs() {
         .with(err_layer);
 
     tracing::subscriber::set_global_default(reg).expect("Log subscriber set failed");
-}
+}*/
 
 fn main() {
     // Активируем логирование и настраиваем уровни вывода
-    setup_logs();
+    env_logger::init();
 
     // Запускаем асинхронный рантайм
     let runtime = Builder::new_multi_thread()

@@ -1,4 +1,4 @@
-use tracing::{
+use log::{
     trace
 };
 use reqwest::{
@@ -38,10 +38,10 @@ pub async fn get_files_list_with_query(request_builder: &GoogleDriveRequestBuild
         ])
         .send()
         .await?
-        .inspect_json::<FilesListResponse, GoogleDriveError>(|d| { trace!(d, "Info resp") })
+        .inspect_json::<FilesListResponse, GoogleDriveError>(|d| { trace!("Info resp: {d}") })
         .await?;
 
-    trace!(?info, "Files list response");
+    trace!("Files list response: {info:?}");
 
     Ok(info)
 }

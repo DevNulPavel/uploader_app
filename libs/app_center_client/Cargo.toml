@@ -16,7 +16,7 @@ hyper-rustls = "0.23"
 futures = "0.3"
 serde = {version="1", features=["derive"]}
 serde_json = "1"
-tracing = "0.1"
+log = "0.4"
 url = "2"
 bytes = "1"
 reqwest_inspect_json = "0.1"
@@ -29,6 +29,4 @@ tokio = {version="1", default-features = false, features = ["fs", "io-util", "ma
 qrcode = "0.12"
 image = "0.23" # QRCode совместима лишь с этой версией
 dirs = "4"
-tracing-subscriber = "0.2"
-tracing-log = "0.1"
-tracing-error = "0.1"
+env_logger = "0.9"

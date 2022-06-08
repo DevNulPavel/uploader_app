@@ -6,7 +6,6 @@ use std::{ops::Deref, sync::Arc};
 use super::{error::MicrosoftAzureError, token::TokenProvider};
 use cow_arc::CowArc;
 use reqwest::{Client, Method, Url};
-use tracing_error::SpanTrace;
 
 /// Внутренняя структура билдера запросов с неизменяемыми данными
 #[derive(Debug)]
@@ -37,21 +36,20 @@ impl<'a> RequestBuilder {
         let base_api_url = Url::parse("https://manage.devcenter.microsoft.com/")
             .expect("Microsoft Azure base api URL parse failed");
 
-        RequestBuilder{
-            base: Arc::new(Base{
+        RequestBuilder {
+            base: Arc::new(Base {
                 http_client,
                 base_url: base_api_url,
                 token_provider,
-                application_id
+                application_id,
             }),
             method: Default::default(),
             flight_id: Default::default(),
             submission_id: Default::default(),
             submission_command: Default::default(),
-            path_segments: Default::default()
-            // upload: false,
-            // edit_id: CowArc::new(None),
-            // edit_command: CowArc::new(None),
+            path_segments: Default::default(), // upload: false,
+                                               // edit_id: CowArc::new(None),
+                                               // edit_command: CowArc::new(None),
         }
     }
 
@@ -92,7 +90,7 @@ impl<'a> RequestBuilder {
         {
             let mut segments = url
                 .path_segments_mut()
-                .map_err(|_| MicrosoftAzureError::UnvalidUrlSegments(SpanTrace::capture()))?;
+                .map_err(|_| MicrosoftAzureError::UnvalidUrlSegments)?;
             // Базовая часть
             segments.push("v1.0");
             segments.push("my");

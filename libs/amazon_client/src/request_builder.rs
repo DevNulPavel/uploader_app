@@ -1,49 +1,40 @@
-use tracing::{
-    debug,
-    // info
-};
-use reqwest::{
-    Client,
-    RequestBuilder,
-    Url,
-    Method
-};
-use super::{
-    error::{
-        AmazonError
-    },
-    token::{
-        AmazonAccessToken
-    }
-};
+use super::{error::AmazonError, token::AmazonAccessToken};
+use log::debug;
+use reqwest::{Client, Method, RequestBuilder, Url};
 
 // https://developers.google.com/play/api/v3/reference/files/list
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-pub struct AmazonAppRequestBuilder<'a>{
+pub struct AmazonAppRequestBuilder<'a> {
     http_client: Client,
     api_url: Url,
-    token: &'a AmazonAccessToken
+    token: &'a AmazonAccessToken,
 }
 impl<'a> AmazonAppRequestBuilder<'a> {
-    pub fn new(http_client: Client,
-               token: &'a AmazonAccessToken,
-               app_id: &str) -> Result<AmazonAppRequestBuilder<'a>, AmazonError> {
+    pub fn new(
+        http_client: Client,
+        token: &'a AmazonAccessToken,
+        app_id: &str,
+    ) -> Result<AmazonAppRequestBuilder<'a>, AmazonError> {
+        let base_addr = format!(
+            "https://developer.amazon.com/api/appstore/v1/applications/{}/",
+            app_id
+        );
 
-        let base_addr = format!("https://developer.amazon.com/api/appstore/v1/applications/{}/", app_id);
-
-        if !base_addr.ends_with('/'){
-            return Err(AmazonError::InvalidBaseAddr("Base addr must ends with /".to_owned()));
+        if !base_addr.ends_with('/') {
+            return Err(AmazonError::InvalidBaseAddr(
+                "Base addr must ends with /".to_owned(),
+            ));
         }
-        
-        let api_url = Url::parse(&base_addr)?;
-        debug!(api_url = %api_url.as_str(), "Api url");
 
-        Ok(AmazonAppRequestBuilder{
+        let api_url = Url::parse(&base_addr)?;
+        debug!("Api url: {}", api_url.as_str());
+
+        Ok(AmazonAppRequestBuilder {
             http_client,
             token,
-            api_url
+            api_url,
         })
     }
 
@@ -68,10 +59,8 @@ impl<'a> AmazonAppRequestBuilder<'a> {
         builder
     }*/
 
-    pub fn build_request(&self, 
-                         method: Method, 
-                         path: &str) -> Result<RequestBuilder, AmazonError> {
-        let AmazonAppRequestBuilder{
+    pub fn build_request(&self, method: Method, path: &str) -> Result<RequestBuilder, AmazonError> {
+        let AmazonAppRequestBuilder {
             http_client,
             token,
             api_url,

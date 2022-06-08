@@ -1,44 +1,30 @@
-use std::{
-    io
-};
-use tracing_error::{
-    SpanTrace
-};
-use quick_error::{
-    quick_error
-};
+use quick_error::quick_error;
+use std::io;
 // use thiserror::{
 //     Error
 // };
-use url::{
-    ParseError
-};
-use super::{
-    responses::{
-        ResponseErrorValue,
-        ResponseErr
-    }
-};
+use super::responses::{ResponseErr, ResponseErrorValue};
+use url::ParseError;
 
-quick_error!{
+quick_error! {
     #[derive(Debug)]
     pub enum GoogleDriveError{
-        InvalidBaseAddr(trace: SpanTrace, info: String){
-        }
-        
-        URLError(trace: SpanTrace, err: ParseError){
-            from(err: ParseError) -> (SpanTrace::capture(), err)
+        InvalidBaseAddr(info: String){
         }
 
-        NetErr(trace: SpanTrace, err: reqwest::Error){
-            from(err: reqwest::Error) -> (SpanTrace::capture(), err)
+        URLError(err: ParseError){
+            from(err: ParseError) -> (err)
         }
 
-        JsonError(trace: SpanTrace, err: serde_json::Error){
-            from(err: serde_json::Error) -> (SpanTrace::capture(), err)
+        NetErr(err: reqwest::Error){
+            from(err: reqwest::Error) -> (err)
         }
 
-        Custom(trace: SpanTrace, info: String){
+        JsonError(err: serde_json::Error){
+            from(err: serde_json::Error) -> (err)
+        }
+
+        Custom(info: String){
         }
 
         WrongFilePath {
@@ -48,7 +34,7 @@ quick_error!{
             from()
         }
 
-        TokenIsExpired(trace: SpanTrace){
+        TokenIsExpired{
         }
 
         EmptyNewOwner{
@@ -67,7 +53,7 @@ pub struct GoogleDriveError{
     source: anyhow::Error
 }
 impl<E> From<E> for GoogleDriveError
-where 
+where
     E: Into<anyhow::Error>
 {
     fn from(err: E) -> GoogleDriveError {
@@ -82,7 +68,7 @@ impl std::fmt::Display for GoogleDriveError {
         write!(f, "SuperError is here!")
     }
 }
-impl std::error::Error for GoogleDriveError{    
+impl std::error::Error for GoogleDriveError{
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         Some(&self.source)
     }

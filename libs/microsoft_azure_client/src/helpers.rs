@@ -1,6 +1,6 @@
 use crate::error::MicrosoftAzureError;
 use std::path::Path;
-use tracing::debug;
+use log::debug;
 
 /// Данная функция проверяет, что расширение файлика совпадает с указанным
 pub fn check_file_extention(path: &Path, required_extention: &str) -> bool {

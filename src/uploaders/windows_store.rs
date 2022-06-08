@@ -3,7 +3,7 @@ use crate::{app_parameters::WindowsStoreParams, env_parameters::WindowsStoreEnvi
 use microsoft_azure_client::MicrosoftAzureClient;
 use std::path::Path;
 use tap::TapFallible;
-use tracing::{error, info, instrument};
+use log::{error, info};
 
 fn get_file_name(path: &Path) -> Result<&str, &str> {
     let file_name = path
@@ -14,7 +14,6 @@ fn get_file_name(path: &Path) -> Result<&str, &str> {
     Ok(file_name)
 }
 
-#[instrument(skip(http_client, env_params, app_params))]
 pub async fn upload_in_windows_store(
     http_client: reqwest::Client,
     env_params: WindowsStoreEnvironment,

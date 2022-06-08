@@ -9,10 +9,10 @@ use crate::{
     },
     submission_helpers::{commit_changes, wait_commit_finished},
 };
-use serde_json_string_parse::ParseJson;
+use log::debug;
 use serde_json::json;
+use serde_json_string_parse::ParseJson;
 use std::path::Path;
-use tracing::{debug, instrument, Instrument};
 
 /// Внутренняя структура по работе с submission
 pub struct FlightSubmission {
@@ -22,7 +22,6 @@ pub struct FlightSubmission {
 
 impl FlightSubmission {
     /// Инициализируем новый экземпляр выливки
-    #[instrument(skip(request_builder, groups, test_flight_name))]
     pub async fn start_new(
         request_builder: RequestBuilder,
         groups: Vec<String>,
@@ -35,7 +34,6 @@ impl FlightSubmission {
             .method(reqwest::Method::POST)
             .join_path("flights".to_owned())
             .build()
-            .in_current_span()
             .await?
             .json(&json!({
                 "groupIds": groups,
@@ -43,10 +41,8 @@ impl FlightSubmission {
                 // "rankHigherThan": null
             }))
             .send()
-            .in_current_span()
             .await?
             .text()
-            .in_current_span()
             .await?
             .parse_json_with_data_err::<DataOrErrorResponse<FlightCreateResponse>>()?
             .into_result()?;
@@ -65,13 +61,10 @@ impl FlightSubmission {
             .clone()
             .method(reqwest::Method::GET)
             .build()
-            .in_current_span()
             .await?
             .send()
-            .in_current_span()
             .await?
             .text()
-            .in_current_span()
             .await?
             .parse_json_with_data_err::<DataOrErrorResponse<FlightInfoResponse>>()?
             .into_result()?;
@@ -100,13 +93,10 @@ impl FlightSubmission {
                 .submission_id(pending.id)
                 .method(reqwest::Method::GET)
                 .build()
-                .in_current_span()
                 .await?
                 .send()
-                .in_current_span()
                 .await?
                 .text()
-                .in_current_span()
                 .await?
                 .parse_json_with_data_err::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()?
                 .into_result()?;
@@ -122,14 +112,11 @@ impl FlightSubmission {
                 .method(reqwest::Method::POST)
                 .join_path("submissions".to_owned())
                 .build()
-                .in_current_span()
                 .await?
                 .header(reqwest::header::CONTENT_LENGTH, 0)
                 .send()
-                .in_current_span()
                 .await?
                 .text()
-                .in_current_span()
                 .await?
                 .parse_json_with_data_err::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()?
                 .into_result()?;
@@ -152,7 +139,6 @@ impl FlightSubmission {
     }
 
     /// Выгружаем наш билд
-    #[instrument(skip(self, zip_file_path))]
     pub async fn upload_build(&mut self, zip_file_path: &Path) -> Result<(), MicrosoftAzureError> {
         // Может быть нет фалика по этому пути
         if !zip_file_path.exists() {
@@ -181,7 +167,6 @@ impl FlightSubmission {
             .clone()
             .method(reqwest::Method::PUT)
             .build()
-            .in_current_span()
             .await?
             .json(&json!({
                 "flightPackages": flight_packages_json,
@@ -189,10 +174,8 @@ impl FlightSubmission {
                 // "notesForCertification": "No special steps are required for certification of this app."
             }))
             .send()
-            .in_current_span()
             .await?
             .text()
-            .in_current_span()
             .await?
             .parse_json_with_data_err::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()?
             .into_result()?;
@@ -205,15 +188,13 @@ impl FlightSubmission {
         let append_data_url = reqwest::Url::parse(&self.data.file_upload_url)?;
 
         // Выполняем непосредственно выгрузку на сервер нашего архива
-        perform_blob_file_uploading(&http_client, &append_data_url, zip_file_path)
-            .in_current_span()
-            .await?;
+        perform_blob_file_uploading(&http_client, &append_data_url, zip_file_path).await?;
 
         // Пытаемся закоммитить
-        commit_changes(&self.request_builder).in_current_span().await?;
+        commit_changes(&self.request_builder).await?;
 
         // Ждем завершения коммита
-        wait_commit_finished(&self.request_builder).in_current_span().await?;
+        wait_commit_finished(&self.request_builder).await?;
 
         Ok(())
     }

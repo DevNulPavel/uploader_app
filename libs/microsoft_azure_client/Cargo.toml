@@ -15,8 +15,7 @@ tokio = {version="1", default-features = false, features = ["fs", "io-util", "rt
 futures = "0.3"
 serde = {version="1", features=["derive"]}
 serde_json = "1"
-tracing = "0.1"
-tracing-error = "0.1"
+log = "0.4"
 url = "2"
 cow_arc = "0.2"
 quick-error = "2"
@@ -29,8 +28,6 @@ serde_json_string_parse = "0.1"
 # TODO: Фичи только во время теста
 [dev-dependencies]
 tokio = {version="1", default-features = false, features = ["fs", "io-util", "macros"]}
-tracing-subscriber = "0.2"
-tracing-log = "0.1"
-tracing-error = "0.1"
+env_logger = "0.9"
 # dirs = "4"
 # httpmock = "0.5.6" // TODO: Вроде как приводит к конфликту версий hyper + проблеме с broken pipe

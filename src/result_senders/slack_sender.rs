@@ -23,7 +23,7 @@ use tokio::{
     },
     sync::Mutex
 };
-use tracing::error;
+use log::error;
 
 fn qr_future_for_result(
     install_url: Option<String>,

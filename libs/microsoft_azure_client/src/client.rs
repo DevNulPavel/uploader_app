@@ -3,9 +3,9 @@ use crate::{
     production_submission::ProductionSubmission, request_builder::RequestBuilder,
     token::TokenProvider,
 };
+use log::debug;
 use reqwest::Client;
 use std::path::Path;
-use tracing::{debug, instrument, Instrument};
 
 pub struct MicrosoftAzureClient {
     request_builder: RequestBuilder,
@@ -13,7 +13,6 @@ pub struct MicrosoftAzureClient {
 
 impl MicrosoftAzureClient {
     /// Создаем нового клиента
-    #[instrument(skip(http_client, tenant_id, client_id, client_secret, application_id))]
     pub fn new<D: std::fmt::Display>(
         http_client: Client,
         tenant_id: D,
@@ -32,7 +31,6 @@ impl MicrosoftAzureClient {
     }
 
     /// Непосредственно выгружаем архив с билдом
-    #[instrument(skip(self, zip_upload_file_path, groups, test_flight_name))]
     pub async fn upload_flight_build(
         &self,
         zip_upload_file_path: &Path,
@@ -46,23 +44,18 @@ impl MicrosoftAzureClient {
         debug!("Microsoft Azure: flight submission create try");
         let mut submission =
             FlightSubmission::start_new(self.request_builder.clone(), groups, test_flight_name)
-                .in_current_span()
                 .await?;
         debug!("Microsoft Azure: flight submission created");
 
         // Выполняем выгрузку файлика
         debug!("Microsoft Azure: File uploading start");
-        submission
-            .upload_build(zip_upload_file_path)
-            .in_current_span()
-            .await?;
+        submission.upload_build(zip_upload_file_path).await?;
         debug!("Microsoft Azure: File uploading finished");
 
         Ok(())
     }
 
     /// Непосредственно выгружаем архив с билдом
-    #[instrument(skip(self, zip_upload_file_path))]
     pub async fn upload_production_build(
         &self,
         zip_upload_file_path: &Path,
@@ -73,16 +66,13 @@ impl MicrosoftAzureClient {
 
         // Создаем новый Submission для данного приложения
         debug!("Microsoft Azure: production submission create try");
-        let mut submission = ProductionSubmission::start_new(self.request_builder.clone())
-            .in_current_span()
-            .await?;
+        let mut submission = ProductionSubmission::start_new(self.request_builder.clone()).await?;
         debug!("Microsoft Azure: production submission created");
 
         // Выполняем выгрузку файлика
         debug!("Microsoft Azure: File uploading start");
         submission
             .upload_build(zip_upload_file_path, submission_name)
-            .in_current_span()
             .await?;
         debug!("Microsoft Azure: File uploading finished");
 

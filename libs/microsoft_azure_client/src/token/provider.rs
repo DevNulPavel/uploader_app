@@ -6,7 +6,7 @@ use crate::{
 use reqwest::{header::CONTENT_TYPE, Client};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::Mutex;
-use tracing::debug;
+use log::debug;
 use url::Url;
 
 ////////////////////////////////////////////////////////////////

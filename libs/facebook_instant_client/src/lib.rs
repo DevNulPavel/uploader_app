@@ -5,15 +5,15 @@ use crate::{
     error::{convert_error, FacebookInstantError},
     responses::{ResponseWrapper, TokenResponse, UploadResponse},
 };
-use serde_json_string_parse::ParseJson;
+use log::debug;
 use reqwest::{
     multipart::{Form, Part},
     Body, Client,
 };
+use serde_json_string_parse::ParseJson;
 use std::path::PathBuf;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
-use tracing::{debug, Instrument};
 // use backtrace::Backtrace as BacktraceNoStd;
 
 /// Клиент для работы с отгрузкой Facebook instant games
@@ -39,11 +39,9 @@ impl FacebookInstantClient {
                 ("grant_type", "client_credentials"),
             ])
             .send()
-            .in_current_span()
             .await
             .map_err(convert_error!(Request, "Token request"))?
             .text()
-            .in_current_span()
             .await
             .map_err(convert_error!(ResponseReceiving, "Token request"))?
             .parse_json_with_data_err::<ResponseWrapper<TokenResponse>>()
@@ -134,7 +132,6 @@ impl FacebookInstantClient {
             ))
             .multipart(multipart)
             .send()
-            .in_current_span()
             .await
             .map_err(convert_error!(Request, "Uploading request"))?
             .error_for_status()
@@ -143,7 +140,6 @@ impl FacebookInstantClient {
                 "Uploading request, error status"
             ))?
             .text()
-            .in_current_span()
             .await
             .map_err(convert_error!(
                 ResponseReceiving,

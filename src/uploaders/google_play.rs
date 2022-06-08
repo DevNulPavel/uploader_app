@@ -29,9 +29,9 @@ pub async fn upload_in_google_play(
         .token(&["https://www.googleapis.com/auth/androidpublisher"])
         .await
         .tap_err(|err| {
-            error!("Token receive failed: {err}");
+            error!("Token receive failed: {}", err);
         })?;
-    debug!("Token received: {token:?}");
+    debug!("Token received: {:?}", token);
 
     // Клиент
     let client = GooglePlayClient::new(client, token);
@@ -44,10 +44,10 @@ pub async fn upload_in_google_play(
         package_name: app_params.package_name.as_str(),
     };
     let uploaded_version = client.upload(task).await.tap_err(|err| {
-        error!("Uploading failed: {err}");
+        error!("Uploading failed: {}", err);
     })?;
 
-    debug!("Google play uploaded version: {uploaded_version}");
+    debug!("Google play uploaded version: {}", uploaded_version);
 
     let file_name = path
         .file_name()

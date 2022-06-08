@@ -47,7 +47,7 @@ where
                         .iter()
                         .map(|sender| sender.send_error(err.as_ref()));
                     join_all(futures_iter).await;
-                    error!("Uploading task failed: {err}");
+                    error!("Uploading task failed: {}", err);
                 }
             }
         }
@@ -178,12 +178,12 @@ async fn async_main() {
         )
     }));
 
-    debug!("App params: {app_parameters:?}");
+    debug!("App params: {:?}", app_parameters);
 
     // Получаем параметры окружения
     let env_params = AppEnvValues::parse();
 
-    debug!("Env params: {env_params:?}");
+    debug!("Env params: {:?}", env_params);
 
     // Общий клиент для запросов
     let http_client = reqwest::Client::builder()

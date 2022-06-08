@@ -17,7 +17,7 @@ pub async fn upload_in_google_drive(
     let key = read_service_account_key(env_params.auth_file)
         .await
         .tap_err(|err| {
-            error!("Credentials read failed: {err}");
+            error!("Credentials read failed: {}", err);
         })?;
     info!("Google drive key read success");
 
@@ -26,7 +26,7 @@ pub async fn upload_in_google_drive(
         .build()
         .await
         .tap_err(|err| {
-            error!("Service account build failed: {err}");
+            error!("Service account build failed: {}", err);
         })?;
     info!("Google drive auth success");
 
@@ -35,7 +35,7 @@ pub async fn upload_in_google_drive(
         .token(&["https://www.googleapis.com/auth/drive"])
         .await
         .tap_err(|err| {
-            error!("Token receive failed: {err}");
+            error!("Token receive failed: {}", err);
         })?;
     info!("Google drive token received");
 
@@ -49,14 +49,14 @@ pub async fn upload_in_google_drive(
             .await?
             .ok_or("Target google drive folder is not found")
             .tap_err(|err| {
-                error!("Folder find failed: {err}");
+                error!("Folder find failed: {}", err);
             })?;
         if let Some(sub_folder_name) = app_params.target_subfolder_name {
             folder
                 .create_subfolder_if_needed(&sub_folder_name)
                 .await
                 .tap_err(|err| {
-                    error!("Subfolder create failed: {err}");
+                    error!("Subfolder create failed: {}", err);
                 })?
         } else {
             folder
@@ -82,7 +82,7 @@ pub async fn upload_in_google_drive(
                     break result;
                 }
                 Err(err) => {
-                    error!("Upload failed: {err}");
+                    error!("Upload failed: {}", err);
                     if current_retry_count < 3 {
                         current_retry_count += 1;
                         tokio::time::sleep(Duration::from_secs(20)).await;
@@ -93,7 +93,7 @@ pub async fn upload_in_google_drive(
             }
         };
 
-        debug!("Google drive uploading result: {result:?}");
+        debug!("Google drive uploading result: {:?}", result);
         results.push(result);
     }
 

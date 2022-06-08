@@ -203,7 +203,7 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment, app_params: SSHParams) ->
     let join: JoinHandle<Result<UploadResultData, SshError>> = spawn_blocking(move || {
         // Тип аддреса
         let addr = get_valid_address(env_params.server)?;
-        debug!("SSH server address: {addr}");
+        debug!("SSH server address: {}", addr);
 
         let stream = TcpStream::connect(addr)?;
         debug!("Stream created");

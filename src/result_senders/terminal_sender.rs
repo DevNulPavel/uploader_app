@@ -9,9 +9,9 @@ pub struct TerminalSender {}
 #[async_trait]
 impl ResultSender for TerminalSender {
     async fn send_result(&self, result: &UploadResultData) {
-        info!("Uploading task success: {result}");
+        info!("Uploading task success: {}", result);
     }
     async fn send_error(&self, err: &(dyn Error + Send + Sync)) {
-        error!("Uploading task error: {err}");
+        error!("Uploading task error: {}", err);
     }
 }

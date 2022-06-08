@@ -210,9 +210,9 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment, app_params: SSHParams) ->
     let join: JoinHandle<Result<UploadResultData, SshError>> = spawn_blocking(move || {
         // Сначала находим путь к исполняемому файлику из окружения
         let ssh_executable_path = which("ssh")?;
-        debug!("SSH executable found at path: {ssh_executable_path:?}");
+        debug!("SSH executable found at path: {}", ssh_executable_path.display());
         let scp_executable_path = which("scp")?;
-        debug!("SCP executable found at path: {scp_executable_path:?}");
+        debug!("SCP executable found at path: {}", scp_executable_path.display());
 
         // Данные для работы SSH
         let ssh_info = SshExecuteInfo {
@@ -223,7 +223,7 @@ pub async fn upload_by_ssh(env_params: SSHEnvironment, app_params: SSHParams) ->
 
         // Получаем полный путь к целевой директории если надо
         let remote_target_dir = get_remote_abs_path(&ssh_info, &app_params.target_dir)?;
-        debug!("Remote target path: {remote_target_dir:?}");
+        debug!("Remote target path: {}", remote_target_dir.display());
 
         // Создаем конечную директорию для выгрузки
         create_result_folder(&ssh_info, &remote_target_dir)?;

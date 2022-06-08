@@ -115,7 +115,7 @@ impl GoogleDriveFile {
             .text()
             .await?;
 
-        debug!("Owner update resp: {text}");
+        debug!("Owner update resp: {}", text);
             // .json::<FilePermissionResponse>()
             // .await?;
 

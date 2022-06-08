@@ -38,10 +38,10 @@ pub async fn get_files_list_with_query(request_builder: &GoogleDriveRequestBuild
         ])
         .send()
         .await?
-        .inspect_json::<FilesListResponse, GoogleDriveError>(|d| { trace!("Info resp: {d}") })
+        .inspect_json::<FilesListResponse, GoogleDriveError>(|d| { trace!("Info resp: {}", d) })
         .await?;
 
-    trace!("Files list response: {info:?}");
+    trace!("Files list response: {:?}", info);
 
     Ok(info)
 }

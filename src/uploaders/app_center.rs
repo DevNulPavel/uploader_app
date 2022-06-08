@@ -71,7 +71,7 @@ pub async fn upload_in_app_center(
 
     let mut iteration_number = 0_u32;
     loop {
-        info!("App center uploading iteration: {iteration_number}");
+        info!("App center uploading iteration: {}", iteration_number);
         iteration_number += 1;
 
         // Результат
@@ -104,7 +104,7 @@ pub async fn upload_in_app_center(
 
             // Если все плохо - делаем несколько попыток c паузой
             Err(err) => {
-                error!("App center uploading failed with error: {err}");
+                error!("App center uploading failed with error: {}", err);
 
                 if iteration_number <= 5 {
                     info!("Wait some time before new iteration");

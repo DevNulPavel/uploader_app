@@ -32,7 +32,7 @@ impl AmazonClient {
         let request_builder =
             AmazonAppRequestBuilder::new(self.http_client.clone(), &self.token, app_id).tap_err(
                 |err| {
-                    error!("Request builder create failed: {err}");
+                    error!("Request builder create failed: {}", err);
                 },
             )?;
 
@@ -43,15 +43,15 @@ impl AmazonClient {
 
     pub async fn upload(&self, task: AmazonUploadTask<'_>) -> Result<(), AmazonError> {
         let edit = self.build_edit(task.application_id).await.tap_err(|err| {
-            error!("Edit create failed: {err}");
+            error!("Edit create failed: {}", err);
         })?;
 
         edit.remove_old_apks().await.tap_err(|err| {
-            error!("Remove old apps failed: {err}");
+            error!("Remove old apps failed: {}", err);
         })?;
 
         let _info = edit.upload_new_apk(task.file_path).await.tap_err(|err| {
-            error!("Upload failed: {err}");
+            error!("Upload failed: {}", err);
         })?;
 
         // Валидация и коммит вроде как запрещены текущим аккаунтом, делаем лишь выгрузку

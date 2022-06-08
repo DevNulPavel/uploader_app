@@ -20,14 +20,14 @@ pub async fn upload_in_amazon(
     )
     .await
     .tap_err(|err| {
-        error!("Access token request failed: {err}");
+        error!("Access token request failed: {}", err);
     })?;
 
     {
         let token_str = token.as_str_checked().tap_err(|err| {
-            error!("Invalid token: {err}");
+            error!("Invalid token: {}", err);
         })?;
-        debug!("Amazon token: {token_str}");
+        debug!("Amazon token: {}", token_str);
     }
 
     let file_path = Path::new(&app_params.file_path);
@@ -39,7 +39,7 @@ pub async fn upload_in_amazon(
         file_path,
     };
     client.upload(task).await.tap_err(|err| {
-        error!("Amazon uploading error: {err}");
+        error!("Amazon uploading error: {}", err);
     })?;
 
     // Имя файла

@@ -94,7 +94,7 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
             .wait_with_output()
             .await
             .tap_err(|err| {
-                error!("xcrun start failed: {err}");
+                error!("xcrun start failed: {}", err);
             })?;
 
         // Проверим ошибку
@@ -124,7 +124,7 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
     // Получим вывод приложения
     let text = String::from_utf8(output.stdout)
         .map_err(|err| Box::new(IOSError::OutputParseFailed(err)))?;
-    debug!("Uploading util output: {text}");
+    debug!("Uploading util output: {}", text);
 
     // Финальное сообщение
     let message = format!("IOS uploading finished:\n- {}", file_name);

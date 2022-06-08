@@ -64,7 +64,7 @@ impl GoogleDriveClient {
             .ok_or(GoogleDriveError::WrongFilePath)?
             .to_str()
             .ok_or(GoogleDriveError::WrongFilePath)?;
-        debug!("File name: {file_name}");
+        debug!("File name: {}", file_name);
 
         // let mut total_uploaded = 0;
         // let file_name_stream = file_name.to_owned();
@@ -119,12 +119,12 @@ impl GoogleDriveClient {
             .send()
             .await?
             .inspect_json::<FilesUploadResponse, GoogleDriveError>(|data| {
-                trace!("Files response: {data}");
+                trace!("Files response: {}", data);
             })
             .await?
             .into_result()?;
 
-        trace!("Uploading response: {info:?}");
+        trace!("Uploading response: {:?}", info);
 
         Ok(GoogleDriveFile::new(self.request_builder.clone(), info))
     }

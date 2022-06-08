@@ -1,12 +1,11 @@
 mod error;
-mod json_helpers;
 mod responses;
 
 use crate::{
     error::{convert_error, FacebookInstantError},
-    json_helpers::ParseJson,
     responses::{ResponseWrapper, TokenResponse, UploadResponse},
 };
+use json_parse_helper::ParseJson;
 use reqwest::{
     multipart::{Form, Part},
     Body, Client,

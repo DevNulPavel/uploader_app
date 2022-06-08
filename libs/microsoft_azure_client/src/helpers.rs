@@ -17,7 +17,9 @@ pub fn check_file_extention(path: &Path, required_extention: &str) -> bool {
 }
 
 /// Ищем внутри архива файлики .appx / .appxupload
-pub fn find_appx_filenames_in_zip(zip_file_path: &Path) -> Result<Vec<String>, MicrosoftAzureError> {
+pub fn find_appx_filenames_in_zip(
+    zip_file_path: &Path,
+) -> Result<Vec<String>, MicrosoftAzureError> {
     // Проверяем расширение данного файлика
     if !check_file_extention(zip_file_path, "zip") {
         return Err(MicrosoftAzureError::InvalidUploadFileExtention);
@@ -32,7 +34,10 @@ pub fn find_appx_filenames_in_zip(zip_file_path: &Path) -> Result<Vec<String>, M
                 .and_then(|f| f.to_str());
             if let Some(file_name) = file_name {
                 !file_name.starts_with('.')
-                    && (file_name.ends_with(".appx") || file_name.ends_with(".appxupload"))
+                    && (file_name.ends_with(".appx")
+                        || file_name.ends_with(".appxupload")
+                        || file_name.ends_with(".msixupload")
+                        || file_name.ends_with(".msix"))
             } else {
                 false
             }

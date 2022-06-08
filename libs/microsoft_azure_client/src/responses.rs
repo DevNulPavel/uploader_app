@@ -224,24 +224,17 @@ pub struct AppPackage {
     pub file_status: String,
 
     #[serde(flatten)]
-    pub other: serde_json::Value
-
+    pub other_fields: serde_json::Value,
+    //
     // pub id: Option<String>,
-
     // pub version: Option<String>,
-
     // pub architecture: Option<String>,
-
     // pub languages: Option<Vec<String>>,
-
     // pub capabilities: Option<Vec<String>>,
-
     // #[serde(rename = "minimumDirectXVersion")]
     // pub minimum_directx_version: Option<String>,
-
     // #[serde(rename = "minimumSystemRam")]
     // pub minimum_system_ram: Option<String>,
-
     // #[serde(rename = "targetDeviceFamilies")]
     // pub target_device_families: Option<Vec<String>>,
 }
@@ -250,65 +243,71 @@ pub struct AppPackage {
 /// Описание данных: `https://docs.microsoft.com/en-us/windows/uwp/monetize/create-an-app-submission#response`
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubmissionCommonData {
-    #[serde(rename = "applicationCategory")]
-    pub application_category: String,
-
-    pub pricing: serde_json::Value,
-
-    pub visibility: String,
-
-    #[serde(rename = "targetPublishMode")]
-    pub target_publish_mode: String,
-
-    #[serde(rename = "targetPublishDate")]
-    pub target_date: String,
-
-    pub listings: serde_json::Value,
-
-    #[serde(rename = "hardwarePreferences")]
-    pub hardware_preferences: serde_json::Value,
-
-    #[serde(rename = "automaticBackupEnabled")]
-    pub automatic_backup_enabled: bool,
-
-    #[serde(rename = "canInstallOnRemovableMedia")]
-    pub can_install_on_removable_media: bool,
-
-    #[serde(rename = "isGameDvrEnabled")]
-    pub is_game_dvr_enabled: bool,
-
-    #[serde(rename = "gamingOptions")]
-    pub gaming_options: serde_json::Value,
-
-    #[serde(rename = "hasExternalInAppProducts")]
-    pub has_external_in_app_products: bool,
-
-    #[serde(rename = "meetAccessibilityGuidelines")]
-    pub meet_accessibility_guidelines: bool,
-
-    #[serde(rename = "notesForCertification")]
-    pub notes_for_certification: String,
-
-    #[serde(rename = "applicationPackages")]
-    pub application_packages: Vec<AppPackage>,
-
-    #[serde(rename = "packageDeliveryOptions")]
-    pub package_delivery_options: serde_json::Value,
-
-    #[serde(rename = "enterpriseLicensing")]
-    pub enterprise_licensing: String,
-
-    #[serde(rename = "allowMicrosoftDecideAppAvailabilityToFutureDeviceFamilies")]
-    pub allow_microsoft_decide_app_availability_to_future_device_families: bool,
-
-    #[serde(rename = "allowTargetFutureDeviceFamilies")]
-    pub allow_target_future_device_families: serde_json::Value,
-
-    pub trailers: serde_json::Value,
-
     // Имя, которое отображается в админке
     #[serde(rename = "friendlyName")]
     pub friendly_name: Option<String>,
+
+    // Режим публикации
+    #[serde(rename = "targetPublishMode")]
+    pub target_publish_mode: String,
+
+    // Пакеты
+    #[serde(rename = "applicationPackages")]
+    pub application_packages: Vec<AppPackage>,
+
+    // Все закомментированные поля выше просто размещаем внутри плоской структуры
+    #[serde(flatten)]
+    pub other_fields: serde_json::Value,
+    //
+    // #[serde(rename = "applicationCategory")]
+    // pub application_category: String,
+
+    // pub pricing: serde_json::Value,
+
+    // pub visibility: String,
+
+    // #[serde(rename = "targetPublishDate")]
+    // pub target_date: String,
+
+    // pub listings: serde_json::Value,
+
+    // #[serde(rename = "hardwarePreferences")]
+    // pub hardware_preferences: serde_json::Value,
+
+    // #[serde(rename = "automaticBackupEnabled")]
+    // pub automatic_backup_enabled: bool,
+
+    // #[serde(rename = "canInstallOnRemovableMedia")]
+    // pub can_install_on_removable_media: bool,
+
+    // #[serde(rename = "isGameDvrEnabled")]
+    // pub is_game_dvr_enabled: bool,
+
+    // #[serde(rename = "gamingOptions")]
+    // pub gaming_options: serde_json::Value,
+
+    // #[serde(rename = "hasExternalInAppProducts")]
+    // pub has_external_in_app_products: bool,
+
+    // #[serde(rename = "meetAccessibilityGuidelines")]
+    // pub meet_accessibility_guidelines: Option<bool>,
+
+    // #[serde(rename = "notesForCertification")]
+    // pub notes_for_certification: Option<String>,
+
+    // #[serde(rename = "packageDeliveryOptions")]
+    // pub package_delivery_options: serde_json::Value,
+
+    // #[serde(rename = "enterpriseLicensing")]
+    // pub enterprise_licensing: String,
+
+    // #[serde(rename = "allowMicrosoftDecideAppAvailabilityToFutureDeviceFamilies")]
+    // pub allow_microsoft_decide_app_availability_to_future_device_families: bool,
+
+    // #[serde(rename = "allowTargetFutureDeviceFamilies")]
+    // pub allow_target_future_device_families: serde_json::Value,
+
+    // pub trailers: serde_json::Value,
 }
 
 /// Данная структура представляет собой ответ после инициализации
@@ -327,7 +326,8 @@ pub struct SubmissionCreateResponse {
 
     #[serde(rename = "fileUploadUrl")]
     pub file_upload_url: String,
-
+    //
+    // Все остальные поля в виде плоской структуры
     // #[serde(flatten)]
     // pub other_fields: serde_json::Value,
 }

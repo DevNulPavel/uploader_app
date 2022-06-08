@@ -24,6 +24,7 @@ bytes = "1"
 zip = "0.5"
 humansize = "1"
 async-channel = "1"
+json_parse_helper = {path = "../json_parse_helper"}
 
 # TODO: Фичи только во время теста
 [dev-dependencies]

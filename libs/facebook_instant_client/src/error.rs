@@ -1,6 +1,7 @@
 use crate::responses::ErrorResponse;
+use json_parse_helper::JsonParseError;
+use std::path::PathBuf;
 // use backtrace::Backtrace as BacktraceNoStd;
-use std::{error::Error as StdError, fmt::Display, path::PathBuf};
 
 #[derive(thiserror::Error, Debug)]
 pub enum FacebookInstantError {
@@ -20,7 +21,7 @@ pub enum FacebookInstantError {
 
     #[error("Response receiving error")]
     ResponseParsing {
-        source: JsonParseError,
+        source: JsonParseError<String>,
         context: &'static str,
         // backtrace: BacktraceNoStd,
     },
@@ -56,22 +57,6 @@ pub enum FacebookInstantError {
         context: &'static str,
         // backtrace: BacktraceNoStd,
     },
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-
-#[derive(Debug)]
-pub struct JsonParseError {
-    pub source: serde_json::Error,
-    pub original_data: String,
-}
-
-impl StdError for JsonParseError {}
-
-impl Display for JsonParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "source: {}, data: {}", self.source, self.original_data)
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////

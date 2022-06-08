@@ -483,6 +483,7 @@ checksum = "77f3309417938f28bf8228fcff79a4a37103981e3e186d2ccd19c74b38f4eb71"
 name = "facebook_instant_client"
 version = "1.0.0"
 dependencies = [
+ "json_parse_helper",
  "mime",
  "reqwest",
  "serde",
@@ -1013,6 +1014,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "json_parse_helper"
+version = "1.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "lazy_static"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1165,6 +1174,7 @@ dependencies = [
  "cow_arc",
  "futures",
  "humansize",
+ "json_parse_helper",
  "quick-error 2.0.0",
  "reqwest",
  "serde",
@@ -2503,6 +2513,7 @@ dependencies = [
  "google_drive_client",
  "google_play_client",
  "image",
+ "json_parse_helper",
  "lazy_static 1.4.0",
  "microsoft_azure_client",
  "qrcode",

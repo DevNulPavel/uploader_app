@@ -1,10 +1,4 @@
 use crate::responses::AppPackage;
-use std::path::Path;
-use tracing::debug;
-use tracing::{instrument, Instrument};
-// use serde_json::{
-//     json
-// };
 use crate::{
     blob_uploader::perform_blob_file_uploading,
     error::MicrosoftAzureError,
@@ -13,6 +7,10 @@ use crate::{
     responses::{DataOrErrorResponse, SubmissionCreateResponse},
     submission_helpers::{commit_changes, wait_commit_finished},
 };
+use json_parse_helper::ParseJson;
+use std::path::Path;
+use tracing::debug;
+use tracing::{instrument, Instrument};
 
 /// Внутренняя структура по работе с submission
 pub struct ProductionSubmission {
@@ -39,9 +37,10 @@ impl ProductionSubmission {
             .send()
             .in_current_span()
             .await?
-            .json::<DataOrErrorResponse<SubmissionCreateResponse>>()
+            .text()
             .in_current_span()
             .await?
+            .parse_json_with_data_err::<DataOrErrorResponse<SubmissionCreateResponse>>()?
             .into_result()?;
         debug!("Microsoft Azure, new submission response: {:#?}", data);
 
@@ -54,8 +53,12 @@ impl ProductionSubmission {
         })
     }
 
-    #[instrument(skip(self, zip_file_path))]
-    pub async fn upload_build(&mut self, zip_file_path: &Path, submission_name: String) -> Result<(), MicrosoftAzureError> {
+    #[instrument(skip(self, zip_file_path, submission_name))]
+    pub async fn upload_build(
+        &mut self,
+        zip_file_path: &Path,
+        submission_name: String,
+    ) -> Result<(), MicrosoftAzureError> {
         // Может быть нет фалика по этому пути
         if !zip_file_path.exists() {
             return Err(MicrosoftAzureError::NoFile(zip_file_path.to_owned()));
@@ -70,7 +73,7 @@ impl ProductionSubmission {
         // Выставляем параметры активации и имя выгрузки
         new_params.friendly_name = Some(submission_name);
         new_params.target_publish_mode = "Manual".to_owned();
-        
+
         // У старых пакетов помечаем статус необходимости удаления
         new_params.application_packages.iter_mut().for_each(|val| {
             val.file_status = "PendingDelete".to_owned();
@@ -97,9 +100,9 @@ impl ProductionSubmission {
             .send()
             .in_current_span()
             .await?
-            .json::<DataOrErrorResponse<SubmissionCreateResponse>>()
-            .in_current_span()
+            .text()
             .await?
+            .parse_json_with_data_err::<DataOrErrorResponse<SubmissionCreateResponse>>()?
             .into_result()?;
         debug!("Microsoft Azure: update response {:#?}", self.data);
 

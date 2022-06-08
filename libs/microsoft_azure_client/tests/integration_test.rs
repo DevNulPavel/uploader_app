@@ -50,9 +50,10 @@ async fn library_integration_test() {
     let client_secret = env::var("MICROSOFT_AZURE_SECRET_KEY").expect("Missing env variable");
 
     // Файлик выгрузки
-    let application_id = "9PBPBN166FXW".to_owned();
+    //let application_id = "9PBPBN166FXW".to_owned(); // MM
+    let application_id = "9NBLGGH2TBBG".to_owned(); // PI2
     let upload_file_path =
-        Path::new("/Users/devnul/Downloads/MHouseXGen_5.161.0.0_Win32_TEST_UPLOAD.appxupload.zip");
+        Path::new("/Users/devnul/Downloads/Island2-PROD-Win-RELEASE_SERVER-PROD-49-68ba7fa563f48147d4629fe00dedf54f8ec2f8aa.zip");
 
     // Создаем HTTP клиента, можно спокойно клонировать, внутри Arc
     let http_client = Client::new();
@@ -67,7 +68,7 @@ async fn library_integration_test() {
     )
     .expect("Client create failed");
 
-    // Делавем попытку выгрузки
+    // Делавем попытку выгрузки теста
     // {
     //     let groups = vec!["1152921504607280735".to_owned()];
     //     let test_flight_name = "Flight name test".to_owned();
@@ -77,7 +78,7 @@ async fn library_integration_test() {
     //         .expect("Upload failed");
     // }
 
-    // Делавем попытку выгрузки
+    // Делавем попытку выгрузки продакшена
     {
         let upload_name = "Production test".to_owned();
         client

@@ -9,6 +9,7 @@ use crate::{
     },
     submission_helpers::{commit_changes, wait_commit_finished},
 };
+use json_parse_helper::ParseJson;
 use serde_json::json;
 use std::path::Path;
 use tracing::{debug, instrument, Instrument};
@@ -44,9 +45,10 @@ impl FlightSubmission {
             .send()
             .in_current_span()
             .await?
-            .json::<DataOrErrorResponse<FlightCreateResponse>>()
+            .text()
             .in_current_span()
             .await?
+            .parse_json_with_data_err::<DataOrErrorResponse<FlightCreateResponse>>()?
             .into_result()?;
         debug!(
             "Microsoft Azure, new flight response: {:#?}",
@@ -68,9 +70,10 @@ impl FlightSubmission {
             .send()
             .in_current_span()
             .await?
-            .json::<DataOrErrorResponse<FlightInfoResponse>>()
+            .text()
             .in_current_span()
             .await?
+            .parse_json_with_data_err::<DataOrErrorResponse<FlightInfoResponse>>()?
             .into_result()?;
         debug!("Microsoft Azure, flight info: {:#?}", flight_info);
 
@@ -102,9 +105,10 @@ impl FlightSubmission {
                 .send()
                 .in_current_span()
                 .await?
-                .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
+                .text()
                 .in_current_span()
                 .await?
+                .parse_json_with_data_err::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()?
                 .into_result()?;
             debug!(
                 "Microsoft Azure, received active flight submission response: {:#?}",
@@ -124,9 +128,10 @@ impl FlightSubmission {
                 .send()
                 .in_current_span()
                 .await?
-                .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
+                .text()
                 .in_current_span()
                 .await?
+                .parse_json_with_data_err::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()?
                 .into_result()?;
             debug!(
                 "Microsoft Azure, new flight submission response: {:#?}",
@@ -186,9 +191,10 @@ impl FlightSubmission {
             .send()
             .in_current_span()
             .await?
-            .json::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()
+            .text()
             .in_current_span()
             .await?
+            .parse_json_with_data_err::<DataOrErrorResponse<FlightSubmissionsCreateResponse>>()?
             .into_result()?;
         debug!("Microsoft Azure: update response {:#?}", self.data);
 

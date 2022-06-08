@@ -1,4 +1,5 @@
 use super::responses::{ErrorResponseValue, SubmissionStatusResponse};
+use json_parse_helper::JsonParseError;
 use quick_error::quick_error;
 use tracing_error::SpanTrace;
 
@@ -18,6 +19,11 @@ quick_error! {
         /// Токен просрочен
         TokenIsExpired {
             display("Microsoft Azure token is expired")
+        }
+
+        /// Ошибка в парсинге JSON ответа
+        JsonParsingError(context: SpanTrace, err: JsonParseError<String>){
+            from(err: JsonParseError<String>) -> (SpanTrace::capture(), err)
         }
 
         /// REST API вернуло ошибку

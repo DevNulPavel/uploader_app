@@ -17,6 +17,7 @@ quick_error! {
     #[derive(Debug)]
     pub enum GooglePlayError {
         InvalidBaseAddr(err: String){
+            display("{}", err)
         }
         
         EmptyUrlSegments{
@@ -24,6 +25,7 @@ quick_error! {
 
         URLError(err: ParseError){
             from()
+            display("{}", err)
         }
 
         // NetErr(context: &'static str, err: reqwest::Error){
@@ -31,6 +33,7 @@ quick_error! {
         // }
         NetErr(err: reqwest::Error){
             from()
+            display("{}", err)
         }
 
         // JsonParseErr(context: &'static str, err: serde_json::Error){
@@ -38,16 +41,19 @@ quick_error! {
         // }
         JsonParseErr(err: serde_json::Error){
             from()
+            display("{}", err)
         }
 
         WrongFilePath{
         }
 
         InvalidFileExtention(err: &'static str){
+            display("{}", err)
         }
 
         FileError(err: io::Error){
             from()
+            display("{}", err)
         }
 
         TokenIsExpired{
@@ -55,9 +61,11 @@ quick_error! {
 
         ResponseError(err: ErrorResponse){
             from()
+            display("{:?}", err)
         }
 
         Custom(err: String){
+            display("{}", err)
         }
     }
 }

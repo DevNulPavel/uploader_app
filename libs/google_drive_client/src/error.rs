@@ -10,21 +10,26 @@ quick_error! {
     #[derive(Debug)]
     pub enum GoogleDriveError{
         InvalidBaseAddr(info: String){
+            display("{}", info)
         }
 
         URLError(err: ParseError){
             from(err: ParseError) -> (err)
+            display("{}", err)
         }
 
         NetErr(err: reqwest::Error){
             from(err: reqwest::Error) -> (err)
+            display("{}", err)
         }
 
         JsonError(err: serde_json::Error){
             from(err: serde_json::Error) -> (err)
+            display("{}", err)
         }
 
         Custom(info: String){
+            display("{}", info)
         }
 
         WrongFilePath {
@@ -32,6 +37,7 @@ quick_error! {
 
         FileError(err: io::Error){
             from()
+            display("{}", err)
         }
 
         TokenIsExpired{
@@ -43,6 +49,7 @@ quick_error! {
         ErrorResponse(err: ResponseErrorValue){
             from()
             from(err: ResponseErr) -> (err.error)
+            display("{}", err)
         }
     }
 }

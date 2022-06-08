@@ -4,15 +4,17 @@ use amazon_client::{
     AmazonClient,
     AmazonUploadTask,
 };
+use log::debug;
 use reqwest::Client;
 use std::{path::Path, sync::Once};
-use log::debug;
 
 fn setup_logs() {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
-        let logger = env_logger::builder().is_test(true).build();
-        log::set_boxed_logger(Box::new(logger)).expect("Logger set failed");
+        if std::env::var("RUST_LOG").is_err() {
+            std::env::set_var("RUST_LOG", "debug");
+        }
+        env_logger::init();
     })
 }
 

@@ -189,8 +189,8 @@ async fn async_main() {
 
     // Общий клиент для запросов
     let http_client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .connect_timeout(std::time::Duration::from_secs(120))
+        .timeout(std::time::Duration::from_secs(300))
+        .connect_timeout(std::time::Duration::from_secs(300))
         .build()
         .expect("Http client build failed");
 

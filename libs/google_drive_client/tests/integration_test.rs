@@ -94,7 +94,7 @@ async fn library_integration_test() {
     info!("Google drive task created");
 
     let res = client
-        .upload(task)
+        .upload(&task)
         .await
         .expect("Google drive uploading failed");
 

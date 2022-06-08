@@ -1,7 +1,7 @@
 use super::upload_result::{UploadResult, UploadResultData};
 use crate::{app_parameters::GoogleDriveParams, env_parameters::GoogleDriveEnvironment};
 use google_drive_client::{GoogleDriveClient, GoogleDriveUploadTask};
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 use tap::TapFallible;
 use tracing::{debug, error, info, instrument};
 use yup_oauth2::{read_service_account_key, ServiceAccountAuthenticator};
@@ -31,7 +31,7 @@ pub async fn upload_in_google_drive(
         })?;
     info!("Google drive auth success");
 
-    // Add the scopes to the secret and get the token.
+    // Add scopes to the secret and get the token.
     let token = auth
         .token(&["https://www.googleapis.com/auth/drive"])
         .await
@@ -74,9 +74,25 @@ pub async fn upload_in_google_drive(
             owner_email: app_params.target_owner_email.as_deref(),
             parent_folder: &folder,
         };
-        let result = client.upload(task).await.tap_err(|err| {
-            error!(%err, "Upload failed");
-        })?;
+
+        // Делаем 3 попытки повторной выгрузки файлика с паузой в 20 секунд
+        let mut current_retry_count = 0;
+        let result = loop {
+            match client.upload(&task).await {
+                Ok(result) => {
+                    break result;
+                }
+                Err(err) => {
+                    error!(%err, "Upload failed");
+                    if current_retry_count < 3 {
+                        current_retry_count += 1;
+                        tokio::time::sleep(Duration::from_secs(20)).await;
+                    } else {
+                        return UploadResult::Err(Box::new(err));
+                    }
+                }
+            }
+        };
 
         debug!(?result, "Google drive uploading result");
         results.push(result);

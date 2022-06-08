@@ -67,6 +67,7 @@ use super::{
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
+// #[derive(Clone)]
 pub struct GoogleDriveUploadTask<'a>{
     pub file_path: PathBuf,
     pub parent_folder: &'a GoogleDriveFolder,
@@ -202,7 +203,7 @@ impl GoogleDriveClient {
     }
 
     #[instrument(skip(self, task))]
-    pub async fn upload(&self, task: GoogleDriveUploadTask<'_>) -> Result<GoogleDriveUploadResult, GoogleDriveError> {
+    pub async fn upload(&self, task: &GoogleDriveUploadTask<'_>) -> Result<GoogleDriveUploadResult, GoogleDriveError> {
         info!("Before upload");
 
         // Выгрузка файлика

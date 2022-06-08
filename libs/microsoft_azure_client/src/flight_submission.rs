@@ -9,7 +9,7 @@ use crate::{
     },
     submission_helpers::{commit_changes, wait_commit_finished},
 };
-use json_parse_helper::ParseJson;
+use serde_json_string_parse_helper::ParseJson;
 use serde_json::json;
 use std::path::Path;
 use tracing::{debug, instrument, Instrument};

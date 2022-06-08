@@ -1,5 +1,5 @@
 use crate::responses::ErrorResponse;
-use json_parse_helper::JsonParseError;
+use serde_json_string_parse_helper::JsonParseError;
 use std::path::PathBuf;
 // use backtrace::Backtrace as BacktraceNoStd;
 

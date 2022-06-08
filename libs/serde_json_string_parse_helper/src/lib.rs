@@ -25,7 +25,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn parse_json<T, R>(data: T) -> Result<R, JsonParseError<T>>
+fn parse_json<T, R>(data: T) -> Result<R, JsonParseError<T>>
 where
     T: AsRef<str>,
     R: for<'de> Deserialize<'de>,

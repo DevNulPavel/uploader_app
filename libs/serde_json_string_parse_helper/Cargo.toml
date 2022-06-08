@@ -1,11 +1,12 @@
 [package]
-name = "json_parse_helper"
-version = "1.0.0"
+name = "serde_json_string_parse_helper"
+version = "0.1.0"
 authors = ["Pavel Ershov <pershov@game-insight.com>"]
 edition = "2021"
 
 [dependencies]
-serde = {version="1", features=["derive"]}
+serde = "1"
 serde_json = "1"
 
 [dev-dependencies]
+serde = {version="1", features=["derive"]}

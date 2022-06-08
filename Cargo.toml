@@ -37,7 +37,7 @@ google_play_client = {path = "libs/google_play_client"}
 amazon_client = {path = "libs/amazon_client"}
 microsoft_azure_client = {path = "libs/microsoft_azure_client"}
 facebook_instant_client = {path = "libs/facebook_instant_client"}
-json_parse_helper = {path = "libs/json_parse_helper"}
+serde_json_string_parse_helper = {path = "libs/serde_json_string_parse_helper"}
 slack_client_lib = {git = "https://github.com/DevNulPavel/slack_client_lib.git", rev = "85c3f17f2a0349914b320083b2be2e4ac74f0919", features = ["rustls"]}
 flame = {version = "0.2", optional = true}
 flamer = {version = "0.4", optional = true}
@@ -65,5 +65,5 @@ members = [
     "libs/microsoft_azure_client",
     "libs/facebook_instant_client",
     "libs/any_field_is_some_macro",
-    "libs/json_parse_helper"
+    "libs/serde_json_string_parse_helper"
 ]

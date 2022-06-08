@@ -7,7 +7,7 @@ use crate::{
     responses::{DataOrErrorResponse, SubmissionCreateResponse},
     submission_helpers::{commit_changes, wait_commit_finished},
 };
-use json_parse_helper::ParseJson;
+use serde_json_string_parse_helper::ParseJson;
 use std::path::Path;
 use tracing::debug;
 use tracing::{instrument, Instrument};

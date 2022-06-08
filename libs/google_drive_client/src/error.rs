@@ -49,7 +49,7 @@ quick_error! {
         ErrorResponse(err: ResponseErrorValue){
             from()
             from(err: ResponseErr) -> (err.error)
-            display("{}", err)
+            display("{:?}", err)
         }
     }
 }

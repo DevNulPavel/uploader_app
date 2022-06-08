@@ -1,5 +1,5 @@
 use super::responses::{ErrorResponseValue, SubmissionStatusResponse};
-use serde_json_string_parse_helper::JsonParseError;
+use serde_json_string_parse::JsonParseError;
 use quick_error::quick_error;
 use tracing_error::SpanTrace;
 

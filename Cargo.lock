@@ -487,7 +487,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "serde_json_string_parse_helper",
+ "serde_json_string_parse",
  "thiserror",
  "tokio",
  "tokio-util",
@@ -1170,7 +1170,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "serde_json_string_parse_helper",
+ "serde_json_string_parse",
  "tokio",
  "tracing",
  "tracing-error",
@@ -1879,8 +1879,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_json_string_parse_helper"
-version = "0.1.0"
+name = "serde_json_string_parse"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "efba2037635da69397bb345686147221c2aeacbbbf857fd0fb27ceac2d94d3fe"
 dependencies = [
  "serde",
  "serde_json",
@@ -2519,7 +2521,6 @@ dependencies = [
  "rand",
  "reqwest",
  "serde_json",
- "serde_json_string_parse_helper",
  "slack_client_lib",
  "ssh2",
  "tap",

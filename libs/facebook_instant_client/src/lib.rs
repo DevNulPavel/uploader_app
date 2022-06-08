@@ -5,7 +5,7 @@ use crate::{
     error::{convert_error, FacebookInstantError},
     responses::{ResponseWrapper, TokenResponse, UploadResponse},
 };
-use serde_json_string_parse_helper::ParseJson;
+use serde_json_string_parse::ParseJson;
 use reqwest::{
     multipart::{Form, Part},
     Body, Client,

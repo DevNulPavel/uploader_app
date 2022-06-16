@@ -111,7 +111,7 @@ pub async fn upload_in_ios(env_params: IOSEnvironment, app_params: IOSParams) ->
                 return UploadResult::Err(Box::new(IOSError::InvalidSpawn(error_text)));
             } else {
                 // Пока что выводим ошибку как есть
-                error!("{error_text}");
+                error!("{}", error_text);
 
                 // Подождем 10 секунд, может быть следующая итерация будет успешной
                 sleep(Duration::from_secs(10)).await;
